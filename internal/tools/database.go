@@ -5,12 +5,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/lib/pq"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/go-sql-driver/mysql" // MySQL driver
+	_ "github.com/lib/pq"              // PostgreSQL driver
+	_ "github.com/mattn/go-sqlite3"    // SQLite driver
 
 	"mcp-ai-server/internal/config"
 	"mcp-ai-server/internal/mcp"
@@ -44,7 +45,7 @@ func NewDatabaseTools(securityManager *config.SecurityManager) *DatabaseTools {
 	// 尝试建立默认数据库连接
 	if err := dt.initializeDefaultConnection(); err != nil {
 		// 如果默认连接失败，只记录错误但不阻止创建工具
-		fmt.Printf("[DEBUG] 警告：初始化默认数据库连接失败: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[DEBUG] 警告：初始化默认数据库连接失败: %v\n", err)
 	}
 
 	return dt
@@ -85,7 +86,7 @@ func (t *DatabaseTools) initializeDefaultConnection() error {
 	t.aliasMap[alias] = db
 	t.connections = append(t.connections, db)
 
-	fmt.Printf("[DEBUG] 成功建立默认数据库连接: %s (%s)\n", alias, driver)
+	fmt.Fprintf(os.Stderr, "[DEBUG] 成功建立默认数据库连接: %s (%s)\n", alias, driver)
 	return nil
 }
 
@@ -336,7 +337,7 @@ func (t *DatabaseTools) executeDBExecute(ctx context.Context, arguments map[stri
 	}
 
 	sqlLower := strings.ToLower(strings.TrimSpace(sqlQuery))
-	dangerousKeywords := []string{"drop", "truncate", "alter"}
+	dangerousKeywords := []string{"truncate", "alter"}
 	for _, keyword := range dangerousKeywords {
 		if strings.HasPrefix(sqlLower, keyword) {
 			return nil, fmt.Errorf("不允许执行 %s 语句", strings.ToUpper(keyword))

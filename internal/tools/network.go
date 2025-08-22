@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -18,6 +19,12 @@ import (
 type NetworkTools struct {
 	securityManager *config.SecurityManager
 	httpClient      *http.Client
+}
+
+// debugPrint 调试输出函数，避免在stdio模式下干扰JSON通信
+func debugPrint(format string, args ...interface{}) {
+	// 在stdio模式下，调试信息输出到stderr
+	fmt.Fprintf(os.Stderr, format, args...)
 }
 
 // NewNetworkTools 创建新的网络工具集合
@@ -283,9 +290,9 @@ func (t *NetworkTools) executeHTTPPost(ctx context.Context, arguments map[string
 	// 记录请求开始时间和超时设置
 	startTime := time.Now()
 	timeoutDuration := t.httpClient.Timeout
-	fmt.Printf("🚀 开始POST请求: %s\n", urlStr)
-	fmt.Printf("⏰ 超时设置: %v\n", timeoutDuration)
-	fmt.Printf("📊 请求数据大小: %d 字节\n", len(data))
+	debugPrint("🚀 开始POST请求: %s\n", urlStr)
+	debugPrint("⏰ 超时设置: %v\n", timeoutDuration)
+	debugPrint("📊 请求数据大小: %d 字节\n", len(data))
 
 	// 发送请求（带重试机制）
 	var resp *http.Response
@@ -294,7 +301,7 @@ func (t *NetworkTools) executeHTTPPost(ctx context.Context, arguments map[string
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
 		if attempt > 0 {
-			fmt.Printf("🔄 重试请求 (第%d次尝试)\n", attempt)
+			debugPrint("🔄 重试请求 (第%d次尝试)\n", attempt)
 		}
 
 		resp, requestErr = t.httpClient.Do(req)
@@ -302,7 +309,7 @@ func (t *NetworkTools) executeHTTPPost(ctx context.Context, arguments map[string
 
 		if requestErr != nil {
 			if strings.Contains(requestErr.Error(), "timeout") && attempt < maxRetries {
-				fmt.Printf("⏰ 请求超时，准备重试 (耗时: %v)\n", requestDuration)
+				debugPrint("⏰ 请求超时，准备重试 (耗时: %v)\n", requestDuration)
 				continue
 			}
 			if strings.Contains(requestErr.Error(), "timeout") {
@@ -311,7 +318,7 @@ func (t *NetworkTools) executeHTTPPost(ctx context.Context, arguments map[string
 			return nil, fmt.Errorf("请求失败 (耗时: %v): %v", requestDuration, requestErr)
 		}
 
-		fmt.Printf("✅ 请求完成，耗时: %v\n", requestDuration)
+		debugPrint("✅ 请求完成，耗时: %v\n", requestDuration)
 		break
 	}
 
@@ -433,4 +440,5 @@ func (t *NetworkTools) executeDNSLookup(ctx context.Context, arguments map[strin
 		},
 	}, nil
 }
+
 // GetTools and ExecuteTool methods

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"regexp"
 	"strings"
 
@@ -18,6 +19,12 @@ type AITools struct {
 	databaseConfigMgr *config.DatabaseConfigManager
 	providers         []AIProvider
 	databaseTools     *DatabaseTools
+}
+
+// debugPrintAI 调试输出函数，避免在stdio模式下干扰JSON通信
+func debugPrintAI(format string, args ...interface{}) {
+	// 在stdio模式下，调试信息输出到stderr
+	fmt.Fprintf(os.Stderr, format, args...)
 }
 
 // NewAITools 创建AI工具实例
@@ -561,11 +568,11 @@ func (c *AITools) executeAIExecuteSQL(ctx context.Context, arguments map[string]
 	// 获取AI提供商（必须使用AI）
 	provider, model, err := c.getProviderAndModel(arguments)
 	if err != nil {
-		fmt.Printf("[DEBUG] 获取AI提供商失败: %v\n", err)
+		debugPrintAI("[DEBUG] 获取AI提供商失败: %v\n", err)
 		return nil, fmt.Errorf("AI不可用: %v", err)
 	}
 
-	fmt.Printf("[DEBUG] 步骤1-2: 接收用户输入: %s\n", prompt)
+	debugPrintAI("[DEBUG] 步骤1-2: 接收用户输入: %s\n", prompt)
 
 	// 获取数据库连接别名
 	alias := ""

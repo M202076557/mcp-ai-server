@@ -164,7 +164,7 @@ func (s *StdioServer) SetToolExecutor(executor ToolExecutor) {
 
 // Start 启动stdio服务器
 func (s *StdioServer) Start() error {
-	log.Println("启动MCP stdio服务器...")
+	// 注意：在stdio模式下，日志应该输出到stderr，避免干扰JSON通信
 
 	// 设置默认能力
 	s.SetCapabilities(map[string]interface{}{
@@ -184,7 +184,7 @@ func (s *StdioServer) Start() error {
 
 // Stop 停止stdio服务器
 func (s *StdioServer) Stop() error {
-	log.Println("停止MCP stdio服务器...")
+	// 注意：在stdio模式下，日志应该输出到stderr
 	s.cancel()
 	return nil
 }

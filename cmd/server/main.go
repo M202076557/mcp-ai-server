@@ -37,6 +37,8 @@ func main() {
 
 	switch *mode {
 	case "stdio":
+		// 在stdio模式下，将日志输出到stderr避免干扰JSON通信
+		log.SetOutput(os.Stderr)
 		server, err = createStdioServer(toolManager)
 	case "websocket":
 		server, err = createWebSocketServer(toolManager, *port)
