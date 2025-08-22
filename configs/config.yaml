@@ -1,0 +1,319 @@
+# MCP服务器配置文件
+# 版本: 1.0.0
+# 描述: 服务器统一配置文件
+
+# ==================== 服务器基础配置 ====================
+server:
+  name: "mcp-ai-server"
+  version: "1.0.0"
+  mode: "websocket" # stdio 或 websocket
+  description: "本地MCP服务器，提供文件、网络、数据库和AI工具"
+
+# ==================== WebSocket配置 ====================
+websocket:
+  host: "0.0.0.0"
+  port: 8081
+  path: "/mcp"
+  cors:
+    enabled: true
+    allowed_origins: ["*"]
+
+# ==================== 工具配置 ====================
+tools:
+  # 系统工具
+  system:
+    enabled: true
+    description: "系统级操作工具"
+    file_read:
+      enabled: true
+      max_file_size: "10MB"
+      allowed_extensions:
+        [".txt", ".md", ".go", ".yaml", ".json", ".xml", ".csv"]
+    file_write:
+      enabled: true
+      max_file_size: "10MB"
+      allowed_paths: ["."]
+    command_execute:
+      enabled: true
+      allowed_commands:
+        ["ls", "cat", "echo", "pwd", "whoami", "date", "ps", "top"]
+      timeout: 30
+    directory_list:
+      enabled: true
+      max_depth: 5
+      allowed_paths: ["."]
+
+  # 网络工具
+  network:
+    enabled: true
+    description: "网络请求和DNS工具"
+    http:
+      timeout: "30s"
+      max_redirects: 5
+      user_agent: "MCP-AI/1.0"
+    dns:
+      timeout: "10s"
+      retries: 3
+
+  # 数据处理工具
+  data:
+    enabled: true
+    description: "数据格式转换和验证工具"
+    json:
+      max_size: "1MB"
+      allow_comments: false
+    encoding:
+      max_size: "10MB"
+
+  # 数据库工具
+  database:
+    enabled: true
+    description: "数据库连接和查询工具"
+    connections:
+      max_pool_size: 25
+      max_idle_conns: 25
+      conn_max_lifetime: "5m"
+      # 默认数据库连接配置
+      default:
+        alias: "mysql_test"
+        driver: "mysql"
+        dsn: "root:root@tcp(localhost:3306)/mcp_test"
+        description: "默认MySQL测试数据库连接"
+    security:
+      allow_drop: false
+      allow_truncate: false
+      allow_alter: false
+      allow_ddl: false
+
+  # AI工具 - 支持多种AI提供商
+  ai:
+    enabled: true
+    description: "AI大模型集成工具，支持多种AI提供商"
+
+    # 默认配置
+    default_provider: "ollama"
+    default_model: "codellama:7b"
+
+    # 通用配置
+    common:
+      timeout: 30
+      max_tokens: 1000
+      temperature: 0.7
+
+    # Ollama本地服务
+    ollama:
+      enabled: true
+      base_url: "http://localhost:11434"
+      models:
+        - "codellama:7b"
+        - "llama2:7b"
+        - "mistral:7b"
+      features:
+        - "text_generation"
+        - "code_generation"
+        - "sql_generation"
+        - "data_analysis"
+        - "natural_language_query"
+
+    # OpenAI云服务
+    openai:
+      enabled: false # 默认禁用，需要配置API密钥
+      api_key: "${OPENAI_API_KEY}" # 从环境变量读取
+      base_url: "https://api.openai.com/v1"
+      models:
+        - "gpt-3.5-turbo"
+        - "gpt-4"
+        - "gpt-4-turbo"
+      features:
+        - "text_generation"
+        - "code_generation"
+        - "sql_generation"
+        - "data_analysis"
+        - "natural_language_query"
+
+    # Anthropic Claude云服务
+    anthropic:
+      enabled: false # 默认禁用，需要配置API密钥
+      api_key: "${ANTHROPIC_API_KEY}" # 从环境变量读取
+      base_url: "https://api.anthropic.com"
+      models:
+        - "claude-3-sonnet"
+        - "claude-3-haiku"
+        - "claude-3-opus"
+      features:
+        - "text_generation"
+        - "code_generation"
+        - "sql_generation"
+        - "data_analysis"
+        - "natural_language_query"
+
+# ==================== 安全配置 ====================
+security:
+  # 路径访问控制
+  paths:
+    # 允许访问的路径列表
+    allowed:
+      - "/Users/ksc/Desktop/study/mcp-ai-server" # 当前项目目录
+      - "/Users/ksc/Documents" # 用户文档目录
+      - "/Users/ksc/Desktop" # 用户桌面目录
+      - "/tmp" # 临时目录
+
+    # 禁止访问的路径列表（优先级高于允许列表）
+    blocked:
+      - "/etc" # 系统配置目录
+      - "/usr" # 系统程序目录
+      - "/var" # 系统变量目录
+      - "/bin" # 系统二进制目录
+      - "/sbin" # 系统管理二进制目录
+
+    # 路径匹配规则
+    rules:
+      allow_relative_paths: true
+      allow_absolute_paths: true
+      max_path_depth: 10
+      max_path_length: 256
+      allowed_extensions: [] # 空表示允许所有
+      blocked_extensions:
+        - ".exe"
+        - ".dll"
+        - ".so"
+        - ".dylib"
+        - ".sh"
+        - ".py"
+        - ".js"
+        - ".php"
+        - ".bat"
+
+  # 命令执行安全
+  commands:
+    # 允许执行的命令列表
+    allowed:
+      - "ls"
+      - "cat"
+      - "echo"
+      - "pwd"
+      - "whoami"
+      - "date"
+      - "ps"
+      - "top"
+      - "find"
+      - "grep"
+      - "head"
+      - "tail"
+
+    # 禁止执行的命令
+    blocked:
+      - "rm"
+      - "rmdir"
+      - "mv"
+      - "cp"
+      - "chmod"
+      - "chown"
+      - "sudo"
+      - "su"
+      - "ssh"
+      - "scp"
+      - "wget"
+      - "curl"
+
+    # 安全设置
+    validation:
+      enabled: true
+      whitelist_mode: true
+      timeout: 30
+
+  # 资源访问限制
+  resources:
+    max_file_size: "10MB"
+    max_directory_items: 1000
+    max_command_output: "10MB"
+    max_http_response: "50MB"
+    max_database_result: "100MB"
+
+  # 文件操作安全
+  files:
+    validation:
+      enabled: true
+      max_file_size: "10MB"
+      blocked_extensions: [".exe", ".bat", ".sh", ".py"]
+
+# ==================== 日志配置 ====================
+logging:
+  level: "info" # debug, info, warn, error
+  format: "text" # text 或 json
+  output: "stdout" # stdout, stderr, 或文件路径
+  file:
+    enabled: false
+    path: "logs/mcp-ai-server.log"
+    max_size: "100MB"
+    max_age: 30
+    max_backups: 5
+
+# ==================== 性能配置 ====================
+performance:
+  # 连接池
+  connection_pool:
+    max_size: 100
+    min_size: 10
+    idle_timeout: "5m"
+
+  # 缓存
+  cache:
+    enabled: true
+    ttl: "5m"
+    max_size: 1000
+
+  # 超时设置
+  timeouts:
+    read: "30s"
+    write: "30s"
+    idle: "60s"
+    ai_request: "60s"
+    database_query: "30s"
+    http_request: "30s"
+
+  # 限流设置
+  rate_limit:
+    enabled: true
+    requests_per_minute: 1000
+    burst_size: 100
+
+# ==================== 监控配置 ====================
+monitoring:
+  enabled: true
+  metrics:
+    enabled: true
+    port: 9090
+    path: "/metrics"
+
+  health_check:
+    enabled: true
+    path: "/health"
+    interval: "30s"
+    timeout: "5s"
+
+  profiling:
+    enabled: false
+    port: 6060
+
+# ==================== 开发配置 ====================
+development:
+  debug: false
+  hot_reload: false
+  profiling: false
+  verbose_logging: false
+
+# ==================== 环境配置 ====================
+environment:
+  # 开发环境
+  development:
+    debug: true
+    logging_level: "debug"
+    hot_reload: true
+
+  # 生产环境
+  production:
+    debug: false
+    logging_level: "warn"
+    hot_reload: false
+    security_strict: true
