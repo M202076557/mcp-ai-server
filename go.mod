@@ -1,8 +1,6 @@
 module mcp-ai-server
 
-go 1.21.0
-
-toolchain go1.24.5
+go 1.24.5
 
 require (
 	github.com/go-sql-driver/mysql v1.9.3

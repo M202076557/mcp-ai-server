@@ -27,6 +27,17 @@ func debugPrintAI(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, format, args...)
 }
 
+// debugPrintAICompatible 兼容fmt.Printf的调试输出函数
+func debugPrintAICompatible(format string, args ...interface{}) {
+	// 重定向所有调试输出到stderr，避免干扰stdio通信
+	fmt.Fprintf(os.Stderr, format, args...)
+}
+
+// 初始化日志输出到stderr，避免干扰stdio模式的JSON通信
+func init() {
+	log.SetOutput(os.Stderr)
+}
+
 // NewAITools 创建AI工具实例
 func NewAITools(configPath string, databaseTools *DatabaseTools) (*AITools, error) {
 	// 创建AI工具实例，即使后续失败也返回一个非nil的实例
@@ -456,11 +467,11 @@ func (c *AITools) executeAIGenerateSQL(ctx context.Context, arguments map[string
 		defaultTable := c.getDefaultTableName(ctx)
 		detectedTable, err := c.intelligentTableDetection(ctx, description, defaultTable)
 		if err != nil {
-			fmt.Printf("[DEBUG] 智能表名检测失败: %v，使用默认表名: %s\n", err, defaultTable)
+			debugPrintAI("[DEBUG] 智能表名检测失败: %v，使用默认表名: %s\n", err, defaultTable)
 			tableName = defaultTable
 		} else {
 			tableName = detectedTable
-			fmt.Printf("[DEBUG] 智能表名检测成功，使用表名: %s\n", tableName)
+			debugPrintAI("[DEBUG] 智能表名检测成功，使用表名: %s\n", tableName)
 		}
 	}
 
@@ -506,7 +517,7 @@ func (c *AITools) executeAIGenerateSQL(ctx context.Context, arguments map[string
 		return nil, fmt.Errorf("SQL生成失败: %v", err)
 	}
 
-	log.Printf("[GenerateSQL] AI响应: %s", response)
+	debugPrintAI("[GenerateSQL] AI响应: %s\n", response)
 
 	// 提取SQL语句
 	sql := extractSQLFromAIResponse(response)
@@ -523,7 +534,7 @@ func (c *AITools) executeAIGenerateSQL(ctx context.Context, arguments map[string
 		}
 	}
 
-	log.Printf("[GenerateSQL] 提取的SQL: %s", sql)
+	debugPrintAI("[GenerateSQL] 提取的SQL: %s\n", sql)
 
 	if sql == "" {
 		return &mcp.ToolCallResult{
@@ -587,7 +598,7 @@ func (c *AITools) executeAIExecuteSQL(ctx context.Context, arguments map[string]
 	}
 
 	// 步骤3: 调用AI生成SQL（使用executeAIGenerateSQL）
-	fmt.Printf("[DEBUG] 步骤3: 开始AI生成SQL...\n")
+	debugPrintAI("[DEBUG] 步骤3: 开始AI生成SQL...\n")
 	sqlGenArgs := map[string]interface{}{
 		"description": prompt,
 		"provider":    provider.Name(),
@@ -618,16 +629,16 @@ func (c *AITools) executeAIExecuteSQL(ctx context.Context, arguments map[string]
 		return nil, fmt.Errorf("步骤3失败-未能从SQL生成结果中提取SQL语句")
 	}
 
-	fmt.Printf("[DEBUG] 步骤3完成: 生成SQL: %s\n", generatedSQL)
+	debugPrintAI("[DEBUG] 步骤3完成: 生成SQL: %s\n", generatedSQL)
 
 	// 步骤4: SQL安全验证
-	fmt.Printf("[DEBUG] 步骤4: 开始SQL安全验证...\n")
+	debugPrintAI("[DEBUG] 步骤4: 开始SQL安全验证...\n")
 	if err := c.validateSQL(generatedSQL); err != nil {
 		return nil, fmt.Errorf("步骤4失败-SQL安全验证失败: %v", err)
 	}
 
 	// 步骤5-7: 执行数据库查询
-	fmt.Printf("[DEBUG] 步骤5-7: 开始执行数据库查询...\n")
+	debugPrintAI("[DEBUG] 步骤5-7: 开始执行数据库查询...\n")
 	var queryResult *mcp.ToolCallResult
 	var queryError error
 
@@ -647,22 +658,22 @@ func (c *AITools) executeAIExecuteSQL(ctx context.Context, arguments map[string]
 		queryResult, queryError = c.databaseTools.ExecuteTool(ctx, "db_query", dbArgs)
 
 		if queryError != nil {
-			fmt.Printf("[DEBUG] 步骤5-7失败: 数据库查询错误: %v\n", queryError)
+			debugPrintAI("[DEBUG] 步骤5-7失败: 数据库查询错误: %v\n", queryError)
 		} else {
-			fmt.Printf("[DEBUG] 步骤5-7完成: 数据库查询成功\n")
+			debugPrintAI("[DEBUG] 步骤5-7完成: 数据库查询成功\n")
 		}
 	} else {
 		queryError = fmt.Errorf("数据库工具不可用")
-		fmt.Printf("[DEBUG] 步骤5-7失败: %v\n", queryError)
+		debugPrintAI("[DEBUG] 步骤5-7失败: %v\n", queryError)
 	}
 
 	// 步骤8: 处理查询结果 - 直接返回数据或错误
-	fmt.Printf("[DEBUG] 步骤8: 处理查询结果...\n")
+	debugPrintAI("[DEBUG] 步骤8: 处理查询结果...\n")
 	var queryData interface{}
 
 	// 如果查询失败，直接返回错误
 	if queryError != nil {
-		fmt.Printf("[DEBUG] 查询失败，直接返回错误: %v\n", queryError)
+		debugPrintAI("[DEBUG] 查询失败，直接返回错误: %v\n", queryError)
 		return nil, fmt.Errorf("数据库查询失败: %v", queryError)
 	}
 
@@ -675,10 +686,10 @@ func (c *AITools) executeAIExecuteSQL(ctx context.Context, arguments map[string]
 		} else {
 			queryData = queryResult.Content[0].Text
 		}
-		fmt.Printf("[DEBUG] 查询成功，准备返回原始数据\n")
+		debugPrintAI("[DEBUG] 查询成功，准备返回原始数据\n")
 	}
 
-	fmt.Printf("[DEBUG] 步骤8完成: 查询结果处理完成\n")
+	debugPrintAI("[DEBUG] 步骤8完成: 查询结果处理完成\n")
 
 	// 构建最终响应
 	response := map[string]interface{}{
@@ -733,13 +744,13 @@ func (c *AITools) validateSQL(sql string) error {
 	// 基础安全检查
 	upperSQL := strings.ToUpper(sql)
 
-	fmt.Printf("[DEBUG] SQL安全验证 - 输入SQL: %s\n", sql)
+	debugPrintAI("[DEBUG] SQL安全验证 - 输入SQL: %s\n", sql)
 
 	// 只检查最危险的操作 - 防止误删数据
 	dangerousKeywords := []string{"DROP", "DELETE", "TRUNCATE"}
 	for _, keyword := range dangerousKeywords {
 		if strings.Contains(upperSQL, keyword) {
-			fmt.Printf("[DEBUG] 发现危险操作: %s\n", keyword)
+			debugPrintAI("[DEBUG] 发现危险操作: %s\n", keyword)
 			return fmt.Errorf("为了安全，不允许 %s 操作", keyword)
 		}
 	}
@@ -749,32 +760,32 @@ func (c *AITools) validateSQL(sql string) error {
 		!strings.Contains(upperSQL, "CREATE") &&
 		!strings.Contains(upperSQL, "INSERT") &&
 		!strings.Contains(upperSQL, "UPDATE") {
-		fmt.Printf("[DEBUG] 未识别的SQL类型\n")
+		debugPrintAI("[DEBUG] 未识别的SQL类型\n")
 		return fmt.Errorf("只支持 SELECT, CREATE, INSERT, UPDATE 操作")
 	}
 
 	// 本地调试环境：跳过复杂的SQL注入检查
-	fmt.Printf("[DEBUG] SQL安全验证通过（本地调试模式）\n")
+	debugPrintAI("[DEBUG] SQL安全验证通过（本地调试模式）\n")
 	return nil
 }
 
 // 3. 智能查询 - 统一的智能查询工具（自动检测SQL或自然语言）
 func (c *AITools) executeAISmartQuery(ctx context.Context, arguments map[string]interface{}) (*mcp.ToolCallResult, error) {
-	fmt.Printf("[DEBUG] ====== executeAISmartQuery 开始 ======\n")
-	fmt.Printf("[DEBUG] 接收到的参数: %+v\n", arguments)
+	debugPrintAI("[DEBUG] ====== executeAISmartQuery 开始 ======\n")
+	debugPrintAI("[DEBUG] 接收到的参数: %+v\n", arguments)
 
 	// 步骤1: 接收用户输入
 	prompt, hasPrompt := arguments["prompt"].(string)
 	if !hasPrompt || prompt == "" {
-		fmt.Printf("[DEBUG] ERROR: prompt参数缺失或为空\n")
+		debugPrintAI("[DEBUG] ERROR: prompt参数缺失或为空\n")
 		return nil, fmt.Errorf("必须提供prompt参数")
 	}
 
-	fmt.Printf("[DEBUG] 步骤1完成 - 输入prompt: '%s'\n", prompt)
+	debugPrintAI("[DEBUG] 步骤1完成 - 输入prompt: '%s'\n", prompt)
 
 	// 步骤2: 自动检测输入类型
 	isDirectSQL := c.detectSQL(prompt)
-	fmt.Printf("[DEBUG] 步骤2完成 - SQL检测结果: %v\n", isDirectSQL)
+	debugPrintAI("[DEBUG] 步骤2完成 - SQL检测结果: %v\n", isDirectSQL)
 
 	// 获取通用参数
 	alias := ""
@@ -797,17 +808,17 @@ func (c *AITools) executeAISmartQuery(ctx context.Context, arguments map[string]
 		tableName = tn
 	} else {
 		// 如果没有指定表名，使用智能表名识别
-		fmt.Printf("[DEBUG] 未指定表名，启动智能表名识别\n")
+		debugPrintAI("[DEBUG] 未指定表名，启动智能表名识别\n")
 		detectedTable, err := c.intelligentTableDetection(ctx, prompt, tableName)
 		if err != nil {
-			fmt.Printf("[DEBUG] 智能表名识别失败: %v，使用默认表名: %s\n", err, tableName)
+			debugPrintAI("[DEBUG] 智能表名识别失败: %v，使用默认表名: %s\n", err, tableName)
 		} else {
 			tableName = detectedTable
-			fmt.Printf("[DEBUG] 智能表名识别成功，使用表名: %s\n", tableName)
+			debugPrintAI("[DEBUG] 智能表名识别成功，使用表名: %s\n", tableName)
 		}
 	}
 
-	fmt.Printf("[DEBUG] 参数解析完成 - alias: '%s', limit: %d, analysisMode: '%s', tableName: '%s'\n",
+	debugPrintAI("[DEBUG] 参数解析完成 - alias: '%s', limit: %d, analysisMode: '%s', tableName: '%s'\n",
 		alias, limit, analysisMode, tableName)
 
 	var finalSQL string
@@ -816,21 +827,21 @@ func (c *AITools) executeAISmartQuery(ctx context.Context, arguments map[string]
 	// 步骤3: 根据输入类型处理
 	if isDirectSQL {
 		// 场景1：直接SQL执行
-		fmt.Printf("[DEBUG] 步骤3 - 进入直接SQL模式\n")
+		debugPrintAI("[DEBUG] 步骤3 - 进入直接SQL模式\n")
 		finalSQL = prompt
 		inputType = "direct_sql"
-		fmt.Printf("[DEBUG] 步骤3完成 - 直接使用SQL: '%s'\n", finalSQL)
+		debugPrintAI("[DEBUG] 步骤3完成 - 直接使用SQL: '%s'\n", finalSQL)
 	} else {
 		// 场景2：自然语言查询（需要AI生成SQL）
-		fmt.Printf("[DEBUG] 步骤3 - 进入自然语言模式，需要AI生成SQL\n")
+		debugPrintAI("[DEBUG] 步骤3 - 进入自然语言模式，需要AI生成SQL\n")
 
 		// 获取AI提供商（仅在需要生成SQL时）
 		provider, model, err := c.getProviderAndModel(arguments)
 		if err != nil {
-			fmt.Printf("[DEBUG] ERROR: 获取AI提供商失败: %v\n", err)
+			debugPrintAI("[DEBUG] ERROR: 获取AI提供商失败: %v\n", err)
 			return nil, fmt.Errorf("AI不可用（自然语言查询需要AI支持）: %v", err)
 		}
-		fmt.Printf("[DEBUG] AI提供商获取成功 - provider: %s, model: %s\n", provider.Name(), model)
+		debugPrintAI("[DEBUG] AI提供商获取成功 - provider: %s, model: %s\n", provider.Name(), model)
 
 		// 调用AI生成SQL
 		sqlGenArgs := map[string]interface{}{
@@ -839,57 +850,57 @@ func (c *AITools) executeAISmartQuery(ctx context.Context, arguments map[string]
 			"provider":    provider.Name(),
 			"model":       model,
 		}
-		fmt.Printf("[DEBUG] 准备调用executeAIGenerateSQL，参数: %+v\n", sqlGenArgs)
+		debugPrintAICompatible("[DEBUG] 准备调用executeAIGenerateSQL，参数: %+v\n", sqlGenArgs)
 
 		sqlResult, err := c.executeAIGenerateSQL(ctx, sqlGenArgs)
 		if err != nil {
-			fmt.Printf("[DEBUG] ERROR: SQL生成失败: %v\n", err)
+			debugPrintAICompatible("[DEBUG] ERROR: SQL生成失败: %v\n", err)
 			return nil, fmt.Errorf("SQL生成失败: %v", err)
 		}
-		fmt.Printf("[DEBUG] executeAIGenerateSQL调用成功，返回内容长度: %d\n", len(sqlResult.Content[0].Text))
+		debugPrintAICompatible("[DEBUG] executeAIGenerateSQL调用成功，返回内容长度: %d\n", len(sqlResult.Content[0].Text))
 
 		// 解析生成的SQL
 		var sqlData map[string]interface{}
 		if err := json.Unmarshal([]byte(sqlResult.Content[0].Text), &sqlData); err != nil {
-			fmt.Printf("[DEBUG] ERROR: 解析SQL生成结果失败: %v\n", err)
-			fmt.Printf("[DEBUG] 原始SQL生成结果: %s\n", sqlResult.Content[0].Text)
+			debugPrintAICompatible("[DEBUG] ERROR: 解析SQL生成结果失败: %v\n", err)
+			debugPrintAICompatible("[DEBUG] 原始SQL生成结果: %s\n", sqlResult.Content[0].Text)
 			return nil, fmt.Errorf("解析SQL生成结果失败: %v", err)
 		}
-		fmt.Printf("[DEBUG] SQL生成结果解析成功: %+v\n", sqlData)
+		debugPrintAICompatible("[DEBUG] SQL生成结果解析成功: %+v\n", sqlData)
 
 		generatedSQL, ok := sqlData["generated_sql"].(string)
 		if !ok {
-			fmt.Printf("[DEBUG] ERROR: 无法提取generated_sql字段\n")
-			fmt.Printf("[DEBUG] sqlData内容: %+v\n", sqlData)
+			debugPrintAICompatible("[DEBUG] ERROR: 无法提取generated_sql字段\n")
+			debugPrintAICompatible("[DEBUG] sqlData内容: %+v\n", sqlData)
 			return nil, fmt.Errorf("未能从SQL生成结果中提取SQL语句")
 		}
 
 		if generatedSQL == "" {
-			fmt.Printf("[DEBUG] ERROR: generated_sql字段为空\n")
-			fmt.Printf("[DEBUG] sqlData内容: %+v\n", sqlData)
+			debugPrintAICompatible("[DEBUG] ERROR: generated_sql字段为空\n")
+			debugPrintAICompatible("[DEBUG] sqlData内容: %+v\n", sqlData)
 			return nil, fmt.Errorf("生成的SQL语句为空")
 		}
 
 		finalSQL = generatedSQL
 		inputType = "natural_language"
-		fmt.Printf("[DEBUG] 步骤3完成 - AI生成SQL: '%s'\n", finalSQL)
+		debugPrintAICompatible("[DEBUG] 步骤3完成 - AI生成SQL: '%s'\n", finalSQL)
 	}
 
 	// 步骤4: SQL安全验证
-	fmt.Printf("[DEBUG] 步骤4 - 开始SQL安全验证，SQL: '%s'\n", finalSQL)
+	debugPrintAICompatible("[DEBUG] 步骤4 - 开始SQL安全验证，SQL: '%s'\n", finalSQL)
 	if err := c.validateSQL(finalSQL); err != nil {
-		fmt.Printf("[DEBUG] ERROR: SQL安全验证失败: %v\n", err)
+		debugPrintAICompatible("[DEBUG] ERROR: SQL安全验证失败: %v\n", err)
 		return nil, fmt.Errorf("SQL安全验证失败: %v", err)
 	}
-	fmt.Printf("[DEBUG] 步骤4完成 - SQL安全验证通过\n")
+	debugPrintAICompatible("[DEBUG] 步骤4完成 - SQL安全验证通过\n")
 
 	// 步骤5: 执行数据库查询
-	fmt.Printf("[DEBUG] 步骤5 - 开始执行数据库查询\n")
+	debugPrintAICompatible("[DEBUG] 步骤5 - 开始执行数据库查询\n")
 	var queryResult *mcp.ToolCallResult
 	var queryError error
 
 	if c.databaseTools != nil {
-		fmt.Printf("[DEBUG] 数据库工具可用，准备执行查询\n")
+		debugPrintAICompatible("[DEBUG] 数据库工具可用，准备执行查询\n")
 		dbArgs := map[string]interface{}{
 			"sql":   finalSQL,
 			"limit": limit,
@@ -898,28 +909,28 @@ func (c *AITools) executeAISmartQuery(ctx context.Context, arguments map[string]
 		// 设置数据库别名，如果没有提供则使用默认值
 		if alias != "" {
 			dbArgs["alias"] = alias
-			fmt.Printf("[DEBUG] 使用指定的数据库别名: %s\n", alias)
+			debugPrintAICompatible("[DEBUG] 使用指定的数据库别名: %s\n", alias)
 		} else {
 			// 使用配置文件中的默认数据库别名
 			dbArgs["alias"] = "mysql_test"
-			fmt.Printf("[DEBUG] 使用默认数据库别名: mysql_test\n")
+			debugPrintAICompatible("[DEBUG] 使用默认数据库别名: mysql_test\n")
 		}
 
-		fmt.Printf("[DEBUG] 数据库查询参数: %+v\n", dbArgs)
+		debugPrintAICompatible("[DEBUG] 数据库查询参数: %+v\n", dbArgs)
 		queryResult, queryError = c.databaseTools.ExecuteTool(ctx, "db_query", dbArgs)
 
 		if queryError != nil {
-			fmt.Printf("[DEBUG] ERROR: 数据库查询失败: %v\n", queryError)
+			debugPrintAICompatible("[DEBUG] ERROR: 数据库查询失败: %v\n", queryError)
 		} else {
-			fmt.Printf("[DEBUG] 数据库查询成功，结果长度: %d\n", len(queryResult.Content[0].Text))
+			debugPrintAICompatible("[DEBUG] 数据库查询成功，结果长度: %d\n", len(queryResult.Content[0].Text))
 		}
 	} else {
 		queryError = fmt.Errorf("数据库工具不可用")
-		fmt.Printf("[DEBUG] ERROR: 数据库工具不可用\n")
+		debugPrintAICompatible("[DEBUG] ERROR: 数据库工具不可用\n")
 	}
 
 	// 步骤6: 构建响应
-	fmt.Printf("[DEBUG] 步骤6 - 开始构建响应\n")
+	debugPrintAICompatible("[DEBUG] 步骤6 - 开始构建响应\n")
 	result := map[string]interface{}{
 		"tool":          "ai_smart_query",
 		"status":        "success",
@@ -939,70 +950,70 @@ func (c *AITools) executeAISmartQuery(ctx context.Context, arguments map[string]
 		result["table_name"] = tableName
 	}
 
-	fmt.Printf("[DEBUG] 基础响应结构创建完成\n")
+	debugPrintAICompatible("[DEBUG] 基础响应结构创建完成\n")
 
 	// 处理查询结果
 	if queryError != nil {
 		result["status"] = "error"
 		result["error"] = queryError.Error()
-		fmt.Printf("[DEBUG] ERROR: 设置错误状态，错误信息: %v\n", queryError)
+		debugPrintAICompatible("[DEBUG] ERROR: 设置错误状态，错误信息: %v\n", queryError)
 	} else if queryResult != nil {
-		fmt.Printf("[DEBUG] 开始解析数据库查询结果\n")
+		debugPrintAICompatible("[DEBUG] 开始解析数据库查询结果\n")
 		// 解析数据库查询结果
 		var dbResponse map[string]interface{}
 		if err := json.Unmarshal([]byte(queryResult.Content[0].Text), &dbResponse); err == nil {
-			fmt.Printf("[DEBUG] 数据库结果解析成功: %+v\n", dbResponse)
+			debugPrintAICompatible("[DEBUG] 数据库结果解析成功: %+v\n", dbResponse)
 
 			if dbResult, ok := dbResponse["result"].(map[string]interface{}); ok {
 				result["result"] = dbResult
 				if rowCount, ok := dbResult["row_count"]; ok {
 					result["row_count"] = rowCount
-					fmt.Printf("[DEBUG] 设置行数: %v\n", rowCount)
+					debugPrintAICompatible("[DEBUG] 设置行数: %v\n", rowCount)
 				}
 				if columns, ok := dbResult["columns"]; ok {
 					result["columns"] = columns
-					fmt.Printf("[DEBUG] 设置列信息，列数: %d\n", len(columns.([]interface{})))
+					debugPrintAICompatible("[DEBUG] 设置列信息，列数: %d\n", len(columns.([]interface{})))
 				}
 				if rows, ok := dbResult["rows"]; ok {
 					result["rows"] = rows
-					fmt.Printf("[DEBUG] 设置行数据，行数: %d\n", len(rows.([]interface{})))
+					debugPrintAICompatible("[DEBUG] 设置行数据，行数: %d\n", len(rows.([]interface{})))
 				}
 				if limited, ok := dbResult["limited"]; ok {
 					result["limited"] = limited
 				}
 			} else {
 				result["raw_result"] = dbResponse
-				fmt.Printf("[DEBUG] 使用原始结果格式\n")
+				debugPrintAICompatible("[DEBUG] 使用原始结果格式\n")
 			}
 
 			// 步骤7: 可选AI分析
 			if analysisMode == "full" && inputType == "natural_language" {
-				fmt.Printf("[DEBUG] 步骤7 - 开始执行AI分析\n")
+				debugPrintAICompatible("[DEBUG] 步骤7 - 开始执行AI分析\n")
 
 				// 获取AI提供商进行分析
 				if provider, model, err := c.getProviderAndModel(arguments); err == nil {
 					analysisResult := c.analyzeQueryResult(ctx, provider, model, prompt, finalSQL, queryResult.Content[0].Text, nil)
 					result["ai_analysis"] = analysisResult
-					fmt.Printf("[DEBUG] AI分析完成，结果长度: %d\n", len(analysisResult))
+					debugPrintAICompatible("[DEBUG] AI分析完成，结果长度: %d\n", len(analysisResult))
 				} else {
-					fmt.Printf("[DEBUG] WARNING: AI分析跳过，无法获取AI提供商: %v\n", err)
+					debugPrintAICompatible("[DEBUG] WARNING: AI分析跳过，无法获取AI提供商: %v\n", err)
 				}
 			} else {
-				fmt.Printf("[DEBUG] 跳过AI分析 - analysisMode: %s, inputType: %s\n", analysisMode, inputType)
+				debugPrintAICompatible("[DEBUG] 跳过AI分析 - analysisMode: %s, inputType: %s\n", analysisMode, inputType)
 			}
 		} else {
 			result["status"] = "error"
 			result["error"] = fmt.Sprintf("解析数据库结果失败: %v", err)
-			fmt.Printf("[DEBUG] ERROR: 解析数据库结果失败: %v\n", err)
-			fmt.Printf("[DEBUG] 原始数据库结果: %s\n", queryResult.Content[0].Text)
+			debugPrintAICompatible("[DEBUG] ERROR: 解析数据库结果失败: %v\n", err)
+			debugPrintAICompatible("[DEBUG] 原始数据库结果: %s\n", queryResult.Content[0].Text)
 		}
 	} else {
-		fmt.Printf("[DEBUG] WARNING: queryResult为nil\n")
+		debugPrintAICompatible("[DEBUG] WARNING: queryResult为nil\n")
 	}
 
-	fmt.Printf("[DEBUG] 响应构建完成，最终结果状态: %s\n", result["status"])
+	debugPrintAICompatible("[DEBUG] 响应构建完成，最终结果状态: %s\n", result["status"])
 	jsonResponse, _ := json.MarshalIndent(result, "", "  ")
-	fmt.Printf("[DEBUG] ====== executeAISmartQuery 结束 ======\n")
+	debugPrintAICompatible("[DEBUG] ====== executeAISmartQuery 结束 ======\n")
 	return &mcp.ToolCallResult{
 		Content: []mcp.Content{
 			{
@@ -1349,11 +1360,11 @@ func (c *AITools) executeAIQueryData(ctx context.Context, arguments map[string]i
 		defaultTable := c.getDefaultTableName(ctx)
 		detectedTable, err := c.intelligentTableDetection(ctx, description, defaultTable)
 		if err != nil {
-			fmt.Printf("[DEBUG] 智能表名检测失败: %v，使用默认表名: %s\n", err, defaultTable)
+			debugPrintAICompatible("[DEBUG] 智能表名检测失败: %v，使用默认表名: %s\n", err, defaultTable)
 			tableName = defaultTable
 		} else {
 			tableName = detectedTable
-			fmt.Printf("[DEBUG] 智能表名检测成功，使用表名: %s\n", tableName)
+			debugPrintAICompatible("[DEBUG] 智能表名检测成功，使用表名: %s\n", tableName)
 		}
 	}
 
@@ -1604,11 +1615,11 @@ func (c *AITools) executeAISmartInsights(ctx context.Context, arguments map[stri
 		defaultTable := c.getDefaultTableName(ctx)
 		detectedTable, err := c.intelligentTableDetection(ctx, prompt, defaultTable)
 		if err != nil {
-			fmt.Printf("[DEBUG] 智能表名检测失败: %v，使用默认表名: %s\n", err, defaultTable)
+			debugPrintAICompatible("[DEBUG] 智能表名检测失败: %v，使用默认表名: %s\n", err, defaultTable)
 			tableName = defaultTable
 		} else {
 			tableName = detectedTable
-			fmt.Printf("[DEBUG] 智能表名检测成功，使用表名: %s\n", tableName)
+			debugPrintAICompatible("[DEBUG] 智能表名检测成功，使用表名: %s\n", tableName)
 		}
 	}
 
@@ -1741,40 +1752,40 @@ func (c *AITools) executeAISmartInsights(ctx context.Context, arguments map[stri
 
 // 智能表名识别和获取功能
 func (c *AITools) intelligentTableDetection(ctx context.Context, prompt string, defaultTable string) (string, error) {
-	fmt.Printf("[DEBUG] ====== 智能表名识别开始 ======\n")
-	fmt.Printf("[DEBUG] 输入prompt: '%s', 默认表名: '%s'\n", prompt, defaultTable)
+	debugPrintAICompatible("[DEBUG] ====== 智能表名识别开始 ======\n")
+	debugPrintAICompatible("[DEBUG] 输入prompt: '%s', 默认表名: '%s'\n", prompt, defaultTable)
 
 	// 首先获取数据库中的所有表
 	availableTables, err := c.getAvailableTables(ctx)
 	if err != nil {
-		fmt.Printf("[DEBUG] 获取表列表失败，使用默认表名: %v\n", err)
+		debugPrintAICompatible("[DEBUG] 获取表列表失败，使用默认表名: %v\n", err)
 		return defaultTable, nil
 	}
 
-	fmt.Printf("[DEBUG] 可用表列表: %v\n", availableTables)
+	debugPrintAICompatible("[DEBUG] 可用表列表: %v\n", availableTables)
 
 	// 如果只有一个表，直接使用
 	if len(availableTables) == 1 {
-		fmt.Printf("[DEBUG] 只有一个表，直接使用: %s\n", availableTables[0])
+		debugPrintAICompatible("[DEBUG] 只有一个表，直接使用: %s\n", availableTables[0])
 		return availableTables[0], nil
 	}
 
 	// 尝试从自然语言中识别表名关键词
 	detectedTable := c.extractTableFromPrompt(prompt, availableTables)
 	if detectedTable != "" {
-		fmt.Printf("[DEBUG] 从自然语言中识别到表名: %s\n", detectedTable)
+		debugPrintAICompatible("[DEBUG] 从自然语言中识别到表名: %s\n", detectedTable)
 		return detectedTable, nil
 	}
 
 	// 如果无法识别，使用AI来智能匹配
 	aiMatchedTable, err := c.aiMatchTable(ctx, prompt, availableTables)
 	if err == nil && aiMatchedTable != "" {
-		fmt.Printf("[DEBUG] AI匹配到表名: %s\n", aiMatchedTable)
+		debugPrintAICompatible("[DEBUG] AI匹配到表名: %s\n", aiMatchedTable)
 		return aiMatchedTable, nil
 	}
 
 	// 最后回退到默认表名
-	fmt.Printf("[DEBUG] 无法智能识别，使用默认表名: %s\n", defaultTable)
+	debugPrintAICompatible("[DEBUG] 无法智能识别，使用默认表名: %s\n", defaultTable)
 	return defaultTable, nil
 }
 
@@ -1877,7 +1888,7 @@ func (c *AITools) aiMatchTable(ctx context.Context, prompt string, availableTabl
 
 请只返回最合适的一个表名，不要包含其他解释。如果无法确定，返回第一个表名。`, prompt, tablesStr)
 
-	fmt.Printf("[DEBUG] AI表名匹配提示词: %s\n", aiPrompt)
+	debugPrintAICompatible("[DEBUG] AI表名匹配提示词: %s\n", aiPrompt)
 
 	// 调用AI
 	result, err := provider.Call(ctx, model, aiPrompt, map[string]interface{}{
