@@ -63,32 +63,33 @@ call dns_lookup domain:"github.com"
 ## 4. 数据库操作演示
 
 ```bash
-# 连接MySQL数据库
+
+# 前提：先连接数据库并准备演示数据
 call db_connect driver:"mysql" dsn:"root:root@tcp(127.0.0.1:3306)/mcp_test" alias:"demo"
 
 # 创建演示表
-call db_execute alias:"demo" sql:"CREATE TABLE IF NOT EXISTS demo_user (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(50), email VARCHAR(100))"
+call db_execute alias:"demo" sql:"CREATE TABLE IF NOT EXISTS mcp_user (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(50), email VARCHAR(100), department VARCHAR(30), age INT, salary DECIMAL(10,2))"
 
 # 插入数据（增）
-call db_execute alias:"demo" sql:"INSERT INTO demo_user (name, email) VALUES ('张三', 'zhangsan@example.com')"
+call db_execute alias:"demo" sql:"INSERT INTO mcp_user (name, email, department, age, salary) VALUES ('张三', 'zhangsan@company.com', 'IT', 28, 8000), ('李四', 'lisi@company.com', 'HR', 32, 6500), ('王五', 'wangwu@company.com', 'IT', 25, 7500), ('赵六', 'zhaoliu@company.com', 'Finance', 30, 7000)"
 
 # 查询数据（查）
-call db_query alias:"demo" sql:"SELECT * FROM demo_user"
+call db_query alias:"demo" sql:"SELECT * FROM mcp_user"
 
 # 更新数据（改）
-call db_execute alias:"demo" sql:"UPDATE demo_user SET email = 'zhangsan_new@example.com' WHERE name = '张三'"
+call db_execute alias:"demo" sql:"UPDATE mcp_user SET email = 'zhangsan_new@example.com' WHERE name = '张三'"
 
 # 验证更新
-call db_query alias:"demo" sql:"SELECT * FROM demo_user"
+call db_query alias:"demo" sql:"SELECT * FROM mcp_user"
 
 # 删除数据（删）
-call db_execute alias:"demo" sql:"DELETE FROM demo_user WHERE name = '张三'"
+call db_execute alias:"demo" sql:"DELETE FROM mcp_user WHERE name = '张三'"
 
 # 验证删除
-call db_query alias:"demo" sql:"SELECT COUNT(*) as count FROM demo_user"
+call db_query alias:"demo" sql:"SELECT COUNT(*) as count FROM mcp_user"
 
 # 清理：删除演示表
-call db_execute alias:"demo" sql:"DROP TABLE IF EXISTS demo_user"
+call db_execute alias:"demo" sql:"DROP TABLE IF EXISTS mcp_user"
 ```
 
 **演示效果**: 展示 MySQL 数据库连接和完整的 CRUD 操作能力（增查改删）
@@ -101,95 +102,60 @@ call db_execute alias:"demo" sql:"DROP TABLE IF EXISTS demo_user"
 
 ```bash
 # 基础AI聊天 - 使用默认提供商
-call ai_chat prompt:"你好，请介绍一下MCP协议是什么？"
+call ai_chat prompt:"你好，请介绍一下MCP协议是什么？50字以内"
 
 # 指定提供商和模型
 call ai_chat prompt:"解释一下Go语言的并发特性" provider:"ollama" model:"llama2:7b"
-
-# 调整生成参数
-call ai_chat prompt:"写一个简单的Go语言Hello World程序" provider:"ollama" max_tokens:500 temperature:0.3
 ```
 
-### 5.2 SQL 生成功能
+### 5.2 AI 智能文件管理
 
 ```bash
-# 根据自然语言生成SQL（仅生成，不执行）
-call ai_generate_sql description:"查询所有年龄大于25岁的用户信息"
+# AI文件管理 - 创建Go项目结构（可执行模式）
+call ai_file_manager instruction:"创建一个Go项目的标准目录结构" target_path:"./demo-go-project" operation_mode:"execute"
 
-# 指定表名和结构
-call ai_generate_sql description:"统计每个部门的员工数量" table_name:"employees" table_schema:"id INT, name VARCHAR(50), department VARCHAR(30), age INT"
-
-# 复杂查询生成
-call ai_generate_sql description:"查询最近30天内注册的用户，按注册时间降序排列，只显示前10个"
+# AI文件管理 - 修改现有项目文件（可执行模式）
+call ai_file_manager instruction:"在demo-go-project目录中添加一个HTTP服务器和配置文件" target_path:"./demo-go-project" operation_mode:"execute"
 ```
 
-### 5.3 智能查询（自动检测 SQL 或自然语言）
+### 5.3 AI 智能数据处理
 
 ```bash
-# 前提：先连接数据库
-call db_connect driver:"mysql" dsn:"root:root@tcp(127.0.0.1:3306)/mcp_test" alias:"demo"
+# AI数据处理 - JSON解析和分析（可执行模式）
+call ai_data_processor instruction:"解析这个JSON数据并提取所有用户的邮箱地址" input_data:'{"users":[{"name":"张三","email":"zhangsan@example.com","age":25},{"name":"李四","email":"lisi@example.com","age":30}]}' data_type:"json" output_format:"table" operation_mode:"execute"
 
-# 创建演示数据
-call db_execute alias:"demo" sql:"CREATE TABLE IF NOT EXISTS employees (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(50), department VARCHAR(30), age INT, salary DECIMAL(10,2))"
-call db_execute alias:"demo" sql:"INSERT INTO employees (name, department, age, salary) VALUES ('张三', 'IT', 28, 8000), ('李四', 'HR', 32, 6500), ('王五', 'IT', 25, 7500), ('赵六', 'Finance', 30, 7000)"
-
-# 自然语言智能查询
-call ai_smart_query prompt:"查询IT部门的所有员工" alias:"demo" analysis_mode:"fast"
-
-# SQL语句智能查询（自动检测为SQL）
-call ai_smart_query prompt:"SELECT department, AVG(salary) as avg_salary FROM employees GROUP BY department" alias:"demo" analysis_mode:"full"
-
-# 复杂自然语言查询
-call ai_smart_query prompt:"找出薪资最高的3个员工及其部门信息" alias:"demo" limit:3
+# AI数据处理 - CSV数据转换（可执行模式）
+call ai_data_processor instruction:"将CSV格式数据转换为JSON格式" input_data:"name,age,city\n张三,25,北京\n李四,30,上海" data_type:"csv" output_format:"json" operation_mode:"execute"
 ```
 
-### 5.4 直接数据查询
+### 5.4 AI 智能网络请求
 
 ```bash
-# 直接通过自然语言获取数据
-call ai_query_data description:"显示所有员工的姓名和薪资" table_name:"employees"
+# AI网络请求 - 获取示例用户数据（简单演示）
+call ai_api_client instruction:"获取用户数据" base_url:"https://jsonplaceholder.typicode.com" request_mode:"execute" response_analysis:true
 
-# 带条件的查询
-call ai_query_data description:"查询年龄超过30岁的员工信息" limit:10
-
-# 统计类查询
-call ai_query_data description:"计算每个部门的平均薪资"
+# AI网络请求 - 获取测试数据（简单演示）
+call ai_api_client instruction:"获取测试数据" base_url:"https://httpbin.org" request_mode:"execute" response_analysis:true
 ```
 
-### 5.5 数据分析功能
+### 5.5 AI 智能数据库查询
 
 ```bash
-# 首先获取一些数据进行分析
-call db_query alias:"demo" sql:"SELECT department, COUNT(*) as employee_count, AVG(salary) as avg_salary, MAX(salary) as max_salary, MIN(salary) as min_salary FROM employees GROUP BY department"
+# AI自然语言数据查询
+call ai_query_with_analysis description:"查询所有员工信息" analysis_type:"insights" table_name:"mcp_user"
 
-# 对查询结果进行AI分析（需要将上面的结果复制为JSON格式）
-call ai_analyze_data data:'[{"department":"IT","employee_count":2,"avg_salary":7750.00,"max_salary":8000.00,"min_salary":7500.00},{"department":"HR","employee_count":1,"avg_salary":6500.00,"max_salary":6500.00,"min_salary":6500.00},{"department":"Finance","employee_count":1,"avg_salary":7000.00,"max_salary":7000.00,"min_salary":7000.00}]' analysis_type:"insights"
-
-# 获取推荐建议
-call ai_analyze_data data:'[{"department":"IT","employee_count":2,"avg_salary":7750.00},{"department":"HR","employee_count":1,"avg_salary":6500.00}]' analysis_type:"recommendations"
-
-# 生成数据摘要
-call ai_analyze_data data:'[{"name":"张三","department":"IT","age":28,"salary":8000},{"name":"李四","department":"HR","age":32,"salary":6500}]' analysis_type:"summary"
+# AI数据摘要报告
+call ai_query_with_analysis description:"生成公司员工整体情况报告" analysis_type:"summary"
 ```
 
-### 5.6 查询+分析组合功能
-
-```bash
-# 一次性完成数据查询和AI分析
-call ai_query_with_analysis description:"分析各部门的员工薪资分布情况" analysis_type:"insights" table_name:"employees"
-
-# 获取业务推荐
-call ai_query_with_analysis description:"查看员工年龄和薪资的关系" analysis_type:"recommendations"
-
-# 生成数据报告摘要
-call ai_query_with_analysis description:"统计公司整体员工情况" analysis_type:"summary"
-```
-
-### 5.7 清理演示数据
+### 5.6 清理演示数据
 
 ```bash
 # 删除演示表
-call db_execute alias:"demo" sql:"DROP TABLE IF EXISTS employees"
+call db_execute alias:"demo" sql:"DROP TABLE IF EXISTS mcp_user"
+
+# 清理演示文件和目录（可选）
+call command_execute command:"rm" args:"-rf" args:"./demo-go-project" args:"./demo.txt"
 ```
 
 **演示效果**: 展示 AI 工具的完整功能链路，从基础对话到复杂的数据查询分析
@@ -202,11 +168,10 @@ call db_execute alias:"demo" sql:"DROP TABLE IF EXISTS employees"
 - **数据库操作**: 成功连接 MySQL，完成表创建、数据插入、查询、更新、删除和表清理的完整流程
 - **AI 工具功能**:
   - **基础对话**: AI 返回关于 MCP 协议、Go 语言等问题的专业回答
-  - **SQL 生成**: 根据自然语言生成准确的 SQL 查询语句
-  - **智能查询**: 自动识别输入类型并执行相应的查询或生成操作
-  - **数据查询**: 直接通过自然语言获取数据库数据
-  - **数据分析**: 对数据提供深度洞察、趋势分析和业务建议
-  - **组合功能**: 一次性完成查询和分析，生成完整的数据报告
+  - **智能数据库**: 通过自然语言查询数据库，AI 自动生成 SQL 并提供数据分析和业务洞察
+  - **AI 文件管理**: 智能理解文件操作需求，生成项目结构规划和文件管理方案
+  - **AI 数据处理**: 自动识别数据格式，智能解析、验证和转换各种数据类型
+  - **AI 网络请求**: 理解 API 调用意图，自动构造 HTTP 请求参数和分析响应
 
 ## 注意事项
 

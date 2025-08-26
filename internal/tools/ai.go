@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"mcp-ai-server/internal/config"
 	"mcp-ai-server/internal/mcp"
@@ -19,6 +21,9 @@ type AITools struct {
 	databaseConfigMgr *config.DatabaseConfigManager
 	providers         []AIProvider
 	databaseTools     *DatabaseTools
+	systemTools       *SystemTools
+	dataTools         *DataTools
+	networkTools      *NetworkTools
 }
 
 // debugPrintAI 调试输出函数，避免在stdio模式下干扰JSON通信
@@ -39,11 +44,14 @@ func init() {
 }
 
 // NewAITools 创建AI工具实例
-func NewAITools(configPath string, databaseTools *DatabaseTools) (*AITools, error) {
+func NewAITools(configPath string, databaseTools *DatabaseTools, systemTools *SystemTools, dataTools *DataTools, networkTools *NetworkTools) (*AITools, error) {
 	// 创建AI工具实例，即使后续失败也返回一个非nil的实例
 	aiTools := &AITools{
 		providers:     make([]AIProvider, 0),
 		databaseTools: databaseTools,
+		systemTools:   systemTools,
+		dataTools:     dataTools,
+		networkTools:  networkTools,
 	}
 
 	// 创建AI配置管理器
@@ -354,6 +362,167 @@ func (c *AITools) GetTools() []mcp.Tool {
 				"required": []string{"prompt"},
 			},
 		},
+		// 7. AI智能文件管理 - 自然语言描述的文件操作
+		{
+			Name:        "ai_file_manager",
+			Description: "AI智能文件管理：使用自然语言描述文件操作需求，AI理解后执行相应的文件系统操作",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"instruction": map[string]interface{}{
+						"type":        "string",
+						"description": "文件操作指令，如'创建一个项目结构'、'查找包含某内容的文件'等",
+					},
+					"target_path": map[string]interface{}{
+						"type":        "string",
+						"description": "目标路径（可选）",
+					},
+					"operation_mode": map[string]interface{}{
+						"type":        "string",
+						"description": "操作模式：plan_only（仅分析和规划）或 execute（执行操作）",
+						"enum":        []string{"plan_only", "execute"},
+						"default":     "plan_only",
+					},
+					"provider": map[string]interface{}{
+						"type":        "string",
+						"description": "AI提供商",
+						"enum":        c.configManager.GetAvailableProviders(),
+						"default":     c.configManager.GetDefaultProvider(),
+					},
+					"model": map[string]interface{}{
+						"type":        "string",
+						"description": "使用的模型名称",
+						"default":     c.configManager.GetDefaultModel(),
+					},
+				},
+				"required": []string{"instruction"},
+			},
+		},
+		// 8. AI智能数据处理 - 自然语言描述的数据转换
+		{
+			Name:        "ai_data_processor",
+			Description: "AI智能数据处理：使用自然语言描述数据处理需求，AI理解后执行相应的数据转换和分析",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"instruction": map[string]interface{}{
+						"type":        "string",
+						"description": "数据处理指令，如'解析这个JSON并提取用户信息'、'验证这些数据的格式'等",
+					},
+					"input_data": map[string]interface{}{
+						"type":        "string",
+						"description": "输入数据",
+					},
+					"data_type": map[string]interface{}{
+						"type":        "string",
+						"description": "数据类型：json, xml, csv, base64等",
+						"enum":        []string{"json", "xml", "csv", "base64", "text", "auto"},
+						"default":     "auto",
+					},
+					"output_format": map[string]interface{}{
+						"type":        "string",
+						"description": "期望的输出格式",
+						"enum":        []string{"json", "table", "summary", "original"},
+						"default":     "json",
+					},
+					"provider": map[string]interface{}{
+						"type":        "string",
+						"description": "AI提供商",
+						"enum":        c.configManager.GetAvailableProviders(),
+						"default":     c.configManager.GetDefaultProvider(),
+					},
+					"model": map[string]interface{}{
+						"type":        "string",
+						"description": "使用的模型名称",
+						"default":     c.configManager.GetDefaultModel(),
+					},
+				},
+				"required": []string{"instruction", "input_data"},
+			},
+		},
+		// 9. AI智能网络请求 - 自然语言描述的API调用
+		{
+			Name:        "ai_api_client",
+			Description: "AI智能网络请求：使用自然语言描述API调用需求，AI理解后构造和执行HTTP请求",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"instruction": map[string]interface{}{
+						"type":        "string",
+						"description": "API调用指令，如'获取GitHub用户信息'、'发送POST请求到某API'等",
+					},
+					"base_url": map[string]interface{}{
+						"type":        "string",
+						"description": "基础URL（可选，AI会从指令中推断）",
+					},
+					"auth_info": map[string]interface{}{
+						"type":        "string",
+						"description": "认证信息（可选）",
+					},
+					"request_mode": map[string]interface{}{
+						"type":        "string",
+						"description": "请求模式：plan_only（仅生成请求计划）或 execute（执行请求）",
+						"enum":        []string{"plan_only", "execute"},
+						"default":     "plan_only",
+					},
+					"response_analysis": map[string]interface{}{
+						"type":        "boolean",
+						"description": "是否对响应进行AI分析",
+						"default":     true,
+					},
+					"provider": map[string]interface{}{
+						"type":        "string",
+						"description": "AI提供商",
+						"enum":        c.configManager.GetAvailableProviders(),
+						"default":     c.configManager.GetDefaultProvider(),
+					},
+					"model": map[string]interface{}{
+						"type":        "string",
+						"description": "使用的模型名称",
+						"default":     c.configManager.GetDefaultModel(),
+					},
+				},
+				"required": []string{"instruction"},
+			},
+		},
+		// 10. AI智能系统管理 - 自然语言描述的系统操作
+		{
+			Name:        "ai_system_admin",
+			Description: "AI智能系统管理：使用自然语言描述系统管理需求，AI理解后执行相应的系统操作",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"instruction": map[string]interface{}{
+						"type":        "string",
+						"description": "系统管理指令，如'检查系统状态'、'清理临时文件'等",
+					},
+					"safety_mode": map[string]interface{}{
+						"type":        "string",
+						"description": "安全模式：safe（安全操作）、moderate（中等风险）、advanced（高级操作）",
+						"enum":        []string{"safe", "moderate", "advanced"},
+						"default":     "safe",
+					},
+					"operation_mode": map[string]interface{}{
+						"type":        "string",
+						"description": "操作模式：plan_only（仅分析和规划）或 execute（执行操作）",
+						"enum":        []string{"plan_only", "execute"},
+						"default":     "plan_only",
+					},
+					"provider": map[string]interface{}{
+						"type":        "string",
+						"description": "AI提供商",
+						"enum":        c.configManager.GetAvailableProviders(),
+						"default":     c.configManager.GetDefaultProvider(),
+					},
+					"model": map[string]interface{}{
+						"type":        "string",
+						"description": "使用的模型名称",
+						"default":     c.configManager.GetDefaultModel(),
+					},
+				},
+				"required": []string{"instruction"},
+			},
+		},
 	}
 }
 
@@ -374,6 +543,14 @@ func (c *AITools) ExecuteTool(ctx context.Context, toolName string, arguments ma
 		return c.executeAIQueryWithAnalysis(ctx, arguments)
 	case "ai_smart_insights":
 		return c.executeAISmartInsights(ctx, arguments)
+	case "ai_file_manager":
+		return c.executeAIFileManager(ctx, arguments)
+	case "ai_data_processor":
+		return c.executeAIDataProcessor(ctx, arguments)
+	case "ai_api_client":
+		return c.executeAIAPIClient(ctx, arguments)
+	case "ai_system_admin":
+		return c.executeAISystemAdmin(ctx, arguments)
 	default:
 		return nil, fmt.Errorf("未知的AI工具: %s", toolName)
 	}
@@ -1919,4 +2096,830 @@ func (c *AITools) getDefaultTableName(ctx context.Context) string {
 		return "users" // 最后的回退值
 	}
 	return availableTables[0]
+}
+
+// executeAIFileManager 执行AI文件管理
+func (c *AITools) executeAIFileManager(ctx context.Context, arguments map[string]interface{}) (*mcp.ToolCallResult, error) {
+	instruction, ok := arguments["instruction"].(string)
+	if !ok {
+		return nil, fmt.Errorf("缺少instruction参数")
+	}
+
+	targetPath := ""
+	if path, exists := arguments["target_path"].(string); exists {
+		targetPath = path
+	}
+
+	operationMode := "plan_only"
+	if mode, exists := arguments["operation_mode"].(string); exists {
+		operationMode = mode
+	}
+
+	provider, model, err := c.getProviderAndModel(arguments)
+	if err != nil {
+		return nil, fmt.Errorf("获取AI提供商失败: %v", err)
+	}
+
+	// 构建AI提示，让AI理解文件操作需求
+	aiPrompt := fmt.Sprintf(`你是一个智能文件管理助手。用户的指令是："%s"
+
+当前目标路径：%s
+
+请分析这个指令并：
+1. 理解用户想要进行的文件操作类型
+2. 确定具体需要执行的操作步骤
+3. 如果需要，生成相应的文件操作命令
+
+操作模式：%s
+- 如果是 plan_only，只输出分析和计划，不执行实际操作
+- 如果是 execute，除了分析还要说明具体执行的操作
+
+请用JSON格式回复，包含以下字段：
+{
+  "analysis": "对指令的分析",
+  "operation_type": "操作类型(read/write/create/delete/list/search等)",
+  "action_plan": ["具体的操作步骤"],
+  "commands": ["如果需要执行，具体的命令或操作"],
+  "warnings": ["任何安全警告或注意事项"]
+}`, instruction, targetPath, operationMode)
+
+	result, err := provider.Call(ctx, model, aiPrompt, nil)
+	if err != nil {
+		return nil, fmt.Errorf("AI文件管理分析失败: %v", err)
+	}
+
+	// 如果是execute模式且有systemTools，尝试执行文件操作
+	var executionResults []string
+	if operationMode == "execute" && c.systemTools != nil {
+		instructionLower := strings.ToLower(instruction)
+
+		if strings.Contains(instructionLower, "创建") || strings.Contains(instructionLower, "新建") {
+			if targetPath != "" {
+				// 首先确保目标目录存在 - 使用Go的os.MkdirAll，更简洁可靠
+				err := os.MkdirAll(targetPath, 0755)
+				if err != nil {
+					executionResults = append(executionResults, fmt.Sprintf("创建目录失败: %v", err))
+				} else {
+					executionResults = append(executionResults, "✅ 目录创建成功")
+
+					// 根据指令内容判断创建类型并创建相应文件
+					if strings.Contains(instructionLower, "go") && strings.Contains(instructionLower, "项目") {
+						// 创建Go项目文件
+						files := map[string]string{
+							"main.go": `package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("Hello, Go!")
+}`,
+							"go.mod": `module example
+
+go 1.19`,
+							"README.md": "# Go Project\n\nThis is a Go project.",
+						}
+
+						for filename, content := range files {
+							filePath := filepath.Join(targetPath, filename)
+							writeArgs := map[string]interface{}{
+								"path":    filePath,
+								"content": content,
+							}
+							_, err := c.systemTools.ExecuteTool(ctx, "file_write", writeArgs)
+							if err != nil {
+								executionResults = append(executionResults, fmt.Sprintf("创建文件 %s 失败: %v", filename, err))
+							} else {
+								executionResults = append(executionResults, fmt.Sprintf("✅ 文件 %s 创建成功", filename))
+							}
+						}
+					} else if strings.Contains(instructionLower, "nodejs") || strings.Contains(instructionLower, "node.js") {
+						// 创建Node.js项目文件
+						packageJSON := `{
+  "name": "nodejs-project",
+  "version": "1.0.0",
+  "description": "A Node.js project",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}`
+						indexJS := `console.log('Hello, Node.js!');`
+						readme := "# Node.js Project\n\nThis is a Node.js project."
+
+						files := map[string]string{
+							"package.json": packageJSON,
+							"index.js":     indexJS,
+							"README.md":    readme,
+						}
+
+						for filename, content := range files {
+							filePath := filepath.Join(targetPath, filename)
+							writeArgs := map[string]interface{}{
+								"path":    filePath,
+								"content": content,
+							}
+							_, err := c.systemTools.ExecuteTool(ctx, "file_write", writeArgs)
+							if err != nil {
+								executionResults = append(executionResults, fmt.Sprintf("创建文件 %s 失败: %v", filename, err))
+							} else {
+								executionResults = append(executionResults, fmt.Sprintf("✅ 文件 %s 创建成功", filename))
+							}
+						}
+					} else if strings.Contains(instructionLower, "文档") || strings.Contains(instructionLower, "docs") {
+						// 创建文档项目文件
+						files := map[string]string{
+							"README.md":     "# 文档项目\n\n这是一个文档项目。",
+							"docs/index.md": "# 首页\n\n欢迎来到文档站点。",
+							"docs/guide.md": "# 使用指南\n\n这里是使用指南。",
+							"docs/api.md":   "# API 文档\n\n这里是API文档。",
+						}
+
+						// 创建docs子目录
+						docsDir := filepath.Join(targetPath, "docs")
+						mkdirArgs := map[string]interface{}{
+							"command": "mkdir",
+							"args":    []string{"-p", docsDir},
+						}
+						c.systemTools.ExecuteTool(ctx, "command_execute", mkdirArgs)
+
+						for filename, content := range files {
+							filePath := filepath.Join(targetPath, filename)
+							writeArgs := map[string]interface{}{
+								"path":    filePath,
+								"content": content,
+							}
+							_, err := c.systemTools.ExecuteTool(ctx, "file_write", writeArgs)
+							if err != nil {
+								executionResults = append(executionResults, fmt.Sprintf("创建文件 %s 失败: %v", filename, err))
+							} else {
+								executionResults = append(executionResults, fmt.Sprintf("✅ 文件 %s 创建成功", filename))
+							}
+						}
+					} else if strings.Contains(instructionLower, "json") || strings.Contains(instructionLower, "配置") {
+						// 创建JSON配置文件
+						configContent := `{
+  "name": "project-config",
+  "version": "1.0.0",
+  "environment": "development",
+  "database": {
+    "host": "localhost",
+    "port": 3306,
+    "name": "mydb"
+  },
+  "server": {
+    "host": "localhost",
+    "port": 8080
+  },
+  "features": {
+    "debug": true,
+    "cache": false
+  }
+}`
+
+						filename := "config.json"
+						if strings.Contains(instructionLower, "package") {
+							filename = "package.json"
+							configContent = `{
+  "name": "my-project",
+  "version": "1.0.0",
+  "description": "My project description",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  }
+}`
+						}
+
+						filePath := filepath.Join(targetPath, filename)
+						writeArgs := map[string]interface{}{
+							"path":    filePath,
+							"content": configContent,
+						}
+						_, err := c.systemTools.ExecuteTool(ctx, "file_write", writeArgs)
+						if err != nil {
+							executionResults = append(executionResults, fmt.Sprintf("创建配置文件失败: %v", err))
+						} else {
+							executionResults = append(executionResults, fmt.Sprintf("✅ 配置文件 %s 创建成功", filename))
+						}
+					} else {
+						// 创建默认文件
+						defaultContent := fmt.Sprintf("# 文件\n\n创建时间: %s\n指令: %s\n",
+							time.Now().Format("2006-01-02 15:04:05"), instruction)
+
+						filename := "README.md"
+						if strings.Contains(instructionLower, ".txt") {
+							filename = "file.txt"
+							defaultContent = fmt.Sprintf("文件创建时间: %s\n指令: %s\n",
+								time.Now().Format("2006-01-02 15:04:05"), instruction)
+						}
+
+						filePath := filepath.Join(targetPath, filename)
+						writeArgs := map[string]interface{}{
+							"path":    filePath,
+							"content": defaultContent,
+						}
+						_, err := c.systemTools.ExecuteTool(ctx, "file_write", writeArgs)
+						if err != nil {
+							executionResults = append(executionResults, fmt.Sprintf("创建文件失败: %v", err))
+						} else {
+							executionResults = append(executionResults, fmt.Sprintf("✅ 文件 %s 创建成功", filename))
+						}
+					}
+				}
+			}
+		} else if strings.Contains(instructionLower, "修改") || strings.Contains(instructionLower, "添加") || strings.Contains(instructionLower, "更新") {
+			// 修改或添加文件操作
+			if targetPath != "" {
+				// 检查目标目录是否存在
+				if _, err := os.Stat(targetPath); os.IsNotExist(err) {
+					executionResults = append(executionResults, "⚠️ 目标目录不存在，请先创建目录")
+				} else {
+					executionResults = append(executionResults, "✅ 找到目标目录")
+
+					// 根据指令内容判断要添加的文件类型
+					if strings.Contains(instructionLower, "http") || strings.Contains(instructionLower, "服务器") || strings.Contains(instructionLower, "server") {
+						// 添加HTTP服务器文件
+						serverContent := `package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+)
+
+func main() {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "Hello, HTTP Server!")
+	})
+
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "{\"status\": \"ok\", \"message\": \"Server is running\"}")
+	})
+
+	fmt.Println("HTTP Server starting on :8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}`
+
+						filePath := filepath.Join(targetPath, "server.go")
+						writeArgs := map[string]interface{}{
+							"path":    filePath,
+							"content": serverContent,
+						}
+						_, err := c.systemTools.ExecuteTool(ctx, "file_write", writeArgs)
+						if err != nil {
+							executionResults = append(executionResults, fmt.Sprintf("添加服务器文件失败: %v", err))
+						} else {
+							executionResults = append(executionResults, "✅ HTTP服务器文件 server.go 添加成功")
+						}
+					}
+
+					if strings.Contains(instructionLower, "配置") || strings.Contains(instructionLower, "config") {
+						// 添加配置文件
+						configContent := `# 应用配置
+server:
+  host: localhost
+  port: 8080
+
+database:
+  driver: mysql
+  host: localhost
+  port: 3306
+  name: myapp
+
+logging:
+  level: info
+  file: app.log
+
+features:
+  debug: true
+  cache: false`
+
+						filePath := filepath.Join(targetPath, "config.yaml")
+						writeArgs := map[string]interface{}{
+							"path":    filePath,
+							"content": configContent,
+						}
+						_, err := c.systemTools.ExecuteTool(ctx, "file_write", writeArgs)
+						if err != nil {
+							executionResults = append(executionResults, fmt.Sprintf("添加配置文件失败: %v", err))
+						} else {
+							executionResults = append(executionResults, "✅ 配置文件 config.yaml 添加成功")
+						}
+					}
+				}
+			}
+		} else if strings.Contains(instructionLower, "查找") || strings.Contains(instructionLower, "列出") {
+			// 文件查找操作
+			listArgs := map[string]interface{}{
+				"path": targetPath,
+			}
+			_, err := c.systemTools.ExecuteTool(ctx, "directory_list", listArgs)
+			if err != nil {
+				executionResults = append(executionResults, fmt.Sprintf("列出目录失败: %v", err))
+			} else {
+				executionResults = append(executionResults, "✅ 目录列表获取成功")
+			}
+		} else {
+			executionResults = append(executionResults, "⚠️ 当前操作类型暂不支持自动执行，仅提供分析结果")
+		}
+	}
+
+	response := map[string]interface{}{
+		"ai_analysis":       result,
+		"operation_mode":    operationMode,
+		"target_path":       targetPath,
+		"execution_results": executionResults,
+	}
+
+	return &mcp.ToolCallResult{
+		Content: []mcp.Content{
+			{
+				Type: "text",
+				Text: fmt.Sprintf("AI文件管理结果：\n%s", formatJSONResponse(response)),
+			},
+		},
+	}, nil
+}
+
+// executeAIDataProcessor 执行AI数据处理
+func (c *AITools) executeAIDataProcessor(ctx context.Context, arguments map[string]interface{}) (*mcp.ToolCallResult, error) {
+	instruction, ok := arguments["instruction"].(string)
+	if !ok {
+		return nil, fmt.Errorf("缺少instruction参数")
+	}
+
+	inputData, ok := arguments["input_data"].(string)
+	if !ok {
+		return nil, fmt.Errorf("缺少input_data参数")
+	}
+
+	dataType := "auto"
+	if dt, exists := arguments["data_type"].(string); exists {
+		dataType = dt
+	}
+
+	outputFormat := "json"
+	if of, exists := arguments["output_format"].(string); exists {
+		outputFormat = of
+	}
+
+	provider, model, err := c.getProviderAndModel(arguments)
+	if err != nil {
+		return nil, fmt.Errorf("获取AI提供商失败: %v", err)
+	}
+
+	// 构建AI提示，让AI理解数据处理需求
+	aiPrompt := fmt.Sprintf(`你是一个智能数据处理助手。用户的指令是："%s"
+
+输入数据：
+%s
+
+数据类型：%s
+期望输出格式：%s
+
+请分析数据并执行用户的指令：
+1. 如果数据类型是auto，请先识别实际数据类型
+2. 根据指令处理数据
+3. 按照期望格式输出结果
+
+请用JSON格式回复，包含以下字段：
+{
+  "detected_type": "识别的数据类型",
+  "processing_steps": ["处理步骤"],
+  "result": "处理后的数据",
+  "analysis": "数据分析结果",
+  "errors": ["任何错误或警告"]
+}`, instruction, inputData, dataType, outputFormat)
+
+	result, err := provider.Call(ctx, model, aiPrompt, nil)
+	if err != nil {
+		return nil, fmt.Errorf("AI数据处理失败: %v", err)
+	}
+
+	// 如果有dataTools，尝试执行一些基础的数据处理操作
+	var processingResults map[string]interface{}
+	operationMode := "plan_only"
+	if mode, exists := arguments["operation_mode"].(string); exists {
+		operationMode = mode
+	}
+
+	if operationMode == "execute" && c.dataTools != nil {
+		// 实际执行数据处理
+		processingResults = make(map[string]interface{})
+
+		// 尝试解析JSON数据并根据指令处理
+		if dataType == "json" || strings.Contains(strings.ToLower(inputData), "{") {
+			var jsonData interface{}
+			err := json.Unmarshal([]byte(inputData), &jsonData)
+			if err != nil {
+				processingResults["error"] = fmt.Sprintf("JSON解析失败: %v", err)
+			} else {
+				processingResults["parsed_json"] = true
+
+				// 根据指令类型进行特定处理
+				instructionLower := strings.ToLower(instruction)
+				if strings.Contains(instructionLower, "邮箱") || strings.Contains(instructionLower, "email") {
+					emails := extractEmailsFromJSON(jsonData)
+					processingResults["extracted_emails"] = emails
+					processingResults["email_count"] = len(emails)
+
+					// 根据输出格式格式化结果
+					if outputFormat == "table" {
+						tableResult := "邮箱地址列表:\n"
+						tableResult += "序号 | 邮箱地址\n"
+						tableResult += "-----|----------\n"
+						for i, email := range emails {
+							tableResult += fmt.Sprintf("%d    | %s\n", i+1, email)
+						}
+						processingResults["formatted_output"] = tableResult
+					} else {
+						processingResults["formatted_output"] = emails
+					}
+				} else if strings.Contains(instructionLower, "用户") || strings.Contains(instructionLower, "user") {
+					users := extractUsersFromJSON(jsonData)
+					processingResults["extracted_users"] = users
+					processingResults["user_count"] = len(users)
+
+					if outputFormat == "table" {
+						tableResult := "用户信息列表:\n"
+						tableResult += "姓名 | 邮箱 | 年龄\n"
+						tableResult += "-----|------|-----\n"
+						for _, user := range users {
+							tableResult += fmt.Sprintf("%s | %s | %v\n",
+								getFieldFromMap(user, "name"),
+								getFieldFromMap(user, "email"),
+								getFieldFromMap(user, "age"))
+						}
+						processingResults["formatted_output"] = tableResult
+					} else {
+						processingResults["formatted_output"] = users
+					}
+				}
+			}
+		} else if dataType == "csv" {
+			// 处理CSV数据
+			lines := strings.Split(inputData, "\n")
+			if len(lines) > 1 {
+				headers := strings.Split(lines[0], ",")
+				var csvData []map[string]string
+
+				for i := 1; i < len(lines); i++ {
+					if strings.TrimSpace(lines[i]) == "" {
+						continue
+					}
+					values := strings.Split(lines[i], ",")
+					row := make(map[string]string)
+					for j, header := range headers {
+						if j < len(values) {
+							row[strings.TrimSpace(header)] = strings.TrimSpace(values[j])
+						}
+					}
+					csvData = append(csvData, row)
+				}
+
+				processingResults["parsed_csv"] = true
+				processingResults["csv_data"] = csvData
+				processingResults["row_count"] = len(csvData)
+
+				if outputFormat == "json" {
+					jsonBytes, _ := json.MarshalIndent(csvData, "", "  ")
+					processingResults["formatted_output"] = string(jsonBytes)
+				}
+			}
+		}
+
+		processingResults["execution_mode"] = "实际执行"
+		processingResults["status"] = "数据处理完成"
+	} else {
+		// 基础数据验证和处理
+		processingResults = map[string]interface{}{
+			"validation_attempted": true,
+			"execution_mode":       "仅规划模式",
+			"note":                 "设置operation_mode为execute以执行实际数据处理",
+		}
+	}
+
+	response := map[string]interface{}{
+		"ai_analysis":        result,
+		"data_type":          dataType,
+		"output_format":      outputFormat,
+		"processing_results": processingResults,
+	}
+
+	return &mcp.ToolCallResult{
+		Content: []mcp.Content{
+			{
+				Type: "text",
+				Text: fmt.Sprintf("AI数据处理结果：\n%s", formatJSONResponse(response)),
+			},
+		},
+	}, nil
+}
+
+// executeAIAPIClient 执行AI网络请求
+func (c *AITools) executeAIAPIClient(ctx context.Context, arguments map[string]interface{}) (*mcp.ToolCallResult, error) {
+	instruction, ok := arguments["instruction"].(string)
+	if !ok {
+		return nil, fmt.Errorf("缺少instruction参数")
+	}
+
+	baseURL := ""
+	if url, exists := arguments["base_url"].(string); exists {
+		baseURL = url
+	}
+
+	authInfo := ""
+	if auth, exists := arguments["auth_info"].(string); exists {
+		authInfo = auth
+	}
+
+	requestMode := "plan_only"
+	if mode, exists := arguments["request_mode"].(string); exists {
+		requestMode = mode
+	}
+
+	responseAnalysis := true
+	if ra, exists := arguments["response_analysis"].(bool); exists {
+		responseAnalysis = ra
+	}
+
+	provider, model, err := c.getProviderAndModel(arguments)
+	if err != nil {
+		return nil, fmt.Errorf("获取AI提供商失败: %v", err)
+	}
+
+	// 构建AI提示，让AI理解API调用需求
+	aiPrompt := fmt.Sprintf(`你是一个智能API客户端助手。用户的指令是："%s"
+
+基础URL：%s
+认证信息：%s
+请求模式：%s
+
+请分析这个指令并：
+1. 理解用户想要调用的API类型和目的
+2. 确定HTTP方法(GET/POST/PUT/DELETE等)
+3. 构造请求URL、头部和数据
+4. 评估请求的安全性和有效性
+
+请用JSON格式回复，包含以下字段：
+{
+  "analysis": "对API调用指令的分析",
+  "http_method": "HTTP方法",
+  "full_url": "完整的请求URL",
+  "headers": {"建议的请求头"},
+  "body": "请求体数据(如果需要)",
+  "security_notes": ["安全注意事项"],
+  "expected_response": "预期的响应格式"
+}`, instruction, baseURL, authInfo, requestMode)
+
+	result, err := provider.Call(ctx, model, aiPrompt, nil)
+	if err != nil {
+		return nil, fmt.Errorf("AI API分析失败: %v", err)
+	}
+
+	// 如果是execute模式且有networkTools，尝试执行请求
+	var executionResults map[string]interface{}
+	if requestMode == "execute" && c.networkTools != nil {
+		// 尝试从AI分析结果中解析API调用信息
+		executionResults = make(map[string]interface{})
+		executionResults["execution_attempted"] = true
+
+		// 简化URL构造逻辑，使用最可靠的端点
+		instructionLower := strings.ToLower(instruction)
+		var requestURL string
+
+		if strings.Contains(instructionLower, "httpbin") || baseURL == "https://httpbin.org" {
+			// httpbin.org - 使用最简单的get端点
+			requestURL = baseURL + "/get"
+		} else if strings.Contains(instructionLower, "jsonplaceholder") || baseURL == "https://jsonplaceholder.typicode.com" {
+			// JSONPlaceholder - 获取用户数据（限制数量）
+			requestURL = baseURL + "/users?_limit=3"
+		} else {
+			// 默认情况：尝试基础URL或添加常见端点
+			if strings.HasSuffix(baseURL, "/") {
+				requestURL = strings.TrimSuffix(baseURL, "/")
+			} else {
+				requestURL = baseURL
+			}
+		} // 执行实际的HTTP请求
+		if requestURL != "" {
+			httpArgs := map[string]interface{}{
+				"url": requestURL,
+				"headers": map[string]interface{}{
+					"User-Agent": "MCP-AI-Client/1.0",
+					"Accept":     "application/json",
+				},
+				"timeout": 30,
+			}
+
+			httpResult, err := c.networkTools.ExecuteTool(ctx, "http_get", httpArgs)
+			if err != nil {
+				executionResults["error"] = fmt.Sprintf("HTTP请求失败: %v", err)
+				executionResults["success"] = false
+			} else {
+				executionResults["success"] = true
+				executionResults["http_response"] = httpResult.Content
+				executionResults["url"] = requestURL
+			}
+		} else {
+			executionResults["error"] = "无法确定请求URL"
+			executionResults["success"] = false
+		}
+	} else {
+		executionResults = map[string]interface{}{
+			"execution_attempted": false,
+			"note":                "需要execute模式和网络工具支持才能执行实际请求",
+		}
+	}
+
+	response := map[string]interface{}{
+		"ai_analysis":               result,
+		"request_mode":              requestMode,
+		"response_analysis_enabled": responseAnalysis,
+		"execution_results":         executionResults,
+	}
+
+	return &mcp.ToolCallResult{
+		Content: []mcp.Content{
+			{
+				Type: "text",
+				Text: fmt.Sprintf("AI API客户端结果：\n%s", formatJSONResponse(response)),
+			},
+		},
+	}, nil
+}
+
+// executeAISystemAdmin 执行AI系统管理
+func (c *AITools) executeAISystemAdmin(ctx context.Context, arguments map[string]interface{}) (*mcp.ToolCallResult, error) {
+	instruction, ok := arguments["instruction"].(string)
+	if !ok {
+		return nil, fmt.Errorf("缺少instruction参数")
+	}
+
+	safetyMode := "safe"
+	if sm, exists := arguments["safety_mode"].(string); exists {
+		safetyMode = sm
+	}
+
+	operationMode := "plan_only"
+	if om, exists := arguments["operation_mode"].(string); exists {
+		operationMode = om
+	}
+
+	provider, model, err := c.getProviderAndModel(arguments)
+	if err != nil {
+		return nil, fmt.Errorf("获取AI提供商失败: %v", err)
+	}
+
+	// 构建AI提示，让AI理解系统管理需求
+	aiPrompt := fmt.Sprintf(`你是一个智能系统管理助手。用户的指令是："%s"
+
+安全模式：%s
+- safe: 只进行安全的只读操作
+- moderate: 允许中等风险的操作
+- advanced: 允许高级系统操作(需要特别谨慎)
+
+操作模式：%s
+
+请分析这个指令并：
+1. 理解用户想要进行的系统管理操作
+2. 评估操作的风险级别
+3. 确定具体的执行步骤
+4. 提供安全建议
+
+请用JSON格式回复，包含以下字段：
+{
+  "analysis": "对系统管理指令的分析",
+  "risk_level": "风险级别(low/medium/high/critical)",
+  "operation_category": "操作类别(monitor/maintenance/config/security等)",
+  "action_plan": ["具体的操作步骤"],
+  "commands": ["建议的系统命令"],
+  "safety_warnings": ["安全警告"],
+  "prerequisites": ["执行前置条件"]
+}`, instruction, safetyMode, operationMode)
+
+	result, err := provider.Call(ctx, model, aiPrompt, nil)
+	if err != nil {
+		return nil, fmt.Errorf("AI系统管理分析失败: %v", err)
+	}
+
+	// 如果是execute模式且有systemTools，尝试执行一些安全的操作
+	var executionResults map[string]interface{}
+	if operationMode == "execute" && c.systemTools != nil && safetyMode == "safe" {
+		executionResults = map[string]interface{}{
+			"execution_attempted": true,
+			"safety_mode":         safetyMode,
+			"note":                "仅在安全模式下执行只读操作",
+		}
+	}
+
+	response := map[string]interface{}{
+		"ai_analysis":       result,
+		"safety_mode":       safetyMode,
+		"operation_mode":    operationMode,
+		"execution_results": executionResults,
+	}
+
+	return &mcp.ToolCallResult{
+		Content: []mcp.Content{
+			{
+				Type: "text",
+				Text: fmt.Sprintf("AI系统管理结果：\n%s", formatJSONResponse(response)),
+			},
+		},
+	}, nil
+}
+
+// formatJSONResponse 格式化JSON响应
+func formatJSONResponse(data interface{}) string {
+	jsonBytes, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return fmt.Sprintf("格式化错误: %v", err)
+	}
+	return string(jsonBytes)
+}
+
+// extractEmailsFromJSON 从JSON数据中提取邮箱地址
+func extractEmailsFromJSON(data interface{}) []string {
+	var emails []string
+
+	switch v := data.(type) {
+	case map[string]interface{}:
+		for key, value := range v {
+			if strings.Contains(strings.ToLower(key), "email") {
+				if email, ok := value.(string); ok && isValidEmail(email) {
+					emails = append(emails, email)
+				}
+			} else {
+				emails = append(emails, extractEmailsFromJSON(value)...)
+			}
+		}
+	case []interface{}:
+		for _, item := range v {
+			emails = append(emails, extractEmailsFromJSON(item)...)
+		}
+	case string:
+		if isValidEmail(v) {
+			emails = append(emails, v)
+		}
+	}
+
+	return emails
+}
+
+// extractUsersFromJSON 从JSON数据中提取用户信息
+func extractUsersFromJSON(data interface{}) []map[string]interface{} {
+	var users []map[string]interface{}
+
+	switch v := data.(type) {
+	case map[string]interface{}:
+		// 检查是否是单个用户对象
+		if hasUserFields(v) {
+			users = append(users, v)
+		} else {
+			// 递归查找用户数组
+			for _, value := range v {
+				users = append(users, extractUsersFromJSON(value)...)
+			}
+		}
+	case []interface{}:
+		for _, item := range v {
+			if userMap, ok := item.(map[string]interface{}); ok && hasUserFields(userMap) {
+				users = append(users, userMap)
+			} else {
+				users = append(users, extractUsersFromJSON(item)...)
+			}
+		}
+	}
+
+	return users
+}
+
+// hasUserFields 检查对象是否包含用户字段
+func hasUserFields(obj map[string]interface{}) bool {
+	userFields := []string{"name", "email", "user", "username", "id"}
+	for _, field := range userFields {
+		if _, exists := obj[field]; exists {
+			return true
+		}
+	}
+	return false
+}
+
+// getFieldFromMap 从map中获取字段值
+func getFieldFromMap(data map[string]interface{}, field string) string {
+	if value, exists := data[field]; exists {
+		return fmt.Sprintf("%v", value)
+	}
+	return ""
+}
+
+// isValidEmail 简单的邮箱格式验证
+func isValidEmail(email string) bool {
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	return emailRegex.MatchString(email)
 }

@@ -43,8 +43,8 @@ func NewToolManager(configPath string) (*ToolManager, error) {
 	dataTools := NewDataTools(securityManager)
 	databaseTools := NewDatabaseTools(securityManager)
 
-	// 创建AI工具，传递配置文件路径和数据库工具
-	aiTools, err := NewAITools(configPath, databaseTools)
+	// 创建AI工具，传递配置文件路径和所有工具的引用
+	aiTools, err := NewAITools(configPath, databaseTools, systemTools, dataTools, networkTools)
 	if err != nil {
 		return nil, fmt.Errorf("创建AI工具失败: %v", err)
 	}

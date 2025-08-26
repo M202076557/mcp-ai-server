@@ -468,7 +468,7 @@ func (c *ImprovedMCPClient) InteractiveMode() {
 
 			// 简化的参数解析：添加description支持
 			// 已知的参数名列表
-			knownParams := []string{"driver", "dsn", "alias", "sql", "limit", "path", "command", "args", "url", "host", "count", "prompt", "model", "provider", "description", "data", "analysis_type", "content", "text", "json_string", "pretty", "algorithm", "operation", "domain"}
+			knownParams := []string{"driver", "dsn", "alias", "sql", "limit", "path", "command", "args", "url", "host", "count", "prompt", "model", "provider", "description", "data", "analysis_type", "content", "text", "json_string", "pretty", "algorithm", "operation", "domain", "instruction", "target_path", "operation_mode", "input_data", "data_type", "output_format", "request_mode", "base_url", "response_analysis", "safety_mode", "table_name", "table_schema", "analysis_mode"}
 
 			// 使用正则表达式匹配 key:value key:"value" key:'value' 模式
 			paramPattern := `(\w+):((?:"[^"]*"|'[^']*'|[^\s]+))`
