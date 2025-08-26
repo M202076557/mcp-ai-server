@@ -142,10 +142,10 @@ call ai_api_client instruction:"获取测试数据" base_url:"https://httpbin.or
 
 ```bash
 # AI自然语言数据查询
-call ai_query_with_analysis description:"查询所有员工信息" analysis_type:"insights" table_name:"mcp_user"
+call ai_query_with_analysis description:"查询所有员工信息" analysis_type:"insights" table_name:"mcp_user" alias:"demo"
 
 # AI数据摘要报告
-call ai_query_with_analysis description:"生成公司员工整体情况报告" analysis_type:"summary"
+call ai_query_with_analysis description:"生成公司员工整体情况报告" analysis_type:"summary" table_name:"mcp_user" alias:"demo"
 ```
 
 ### 5.6 清理演示数据

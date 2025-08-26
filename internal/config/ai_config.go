@@ -20,14 +20,22 @@ type ToolsConfig struct {
 
 // AIToolsConfig AI工具配置
 type AIToolsConfig struct {
-	Enabled         bool           `yaml:"enabled"`
-	Description     string         `yaml:"description"`
-	DefaultProvider string         `yaml:"default_provider"`
-	DefaultModel    string         `yaml:"default_model"`
-	Common          CommonConfig   `yaml:"common"`
-	Ollama          ProviderConfig `yaml:"ollama"`
-	OpenAI          ProviderConfig `yaml:"openai"`
-	Anthropic       ProviderConfig `yaml:"anthropic"`
+	Enabled         bool                      `yaml:"enabled"`
+	Description     string                    `yaml:"description"`
+	DefaultProvider string                    `yaml:"default_provider"`
+	DefaultModel    string                    `yaml:"default_model"`
+	Common          CommonConfig              `yaml:"common"`
+	FunctionModels  map[string]FunctionModel  `yaml:"function_models"`
+	Ollama          ProviderConfig            `yaml:"ollama"`
+	OpenAI          ProviderConfig            `yaml:"openai"`
+	Anthropic       ProviderConfig            `yaml:"anthropic"`
+}
+
+// FunctionModel 功能特定模型配置
+type FunctionModel struct {
+	Provider    string `yaml:"provider"`
+	Model       string `yaml:"model"`
+	Description string `yaml:"description"`
 }
 
 // ProviderConfig 提供商配置
@@ -156,4 +164,32 @@ func (m *AIConfigManager) GetProviderModels(providerName string) []string {
 		return provider.Models
 	}
 	return nil
+}
+
+// GetFunctionModel 获取指定功能的模型配置
+func (m *AIConfigManager) GetFunctionModel(function string) (string, string, bool) {
+	if m.config.FunctionModels == nil {
+		// 如果没有配置功能特定模型，使用默认配置
+		return m.config.DefaultProvider, m.config.DefaultModel, true
+	}
+	
+	if functionModel, exists := m.config.FunctionModels[function]; exists {
+		return functionModel.Provider, functionModel.Model, true
+	}
+	
+	// 如果没有找到特定功能的配置，使用默认配置
+	return m.config.DefaultProvider, m.config.DefaultModel, true
+}
+
+// GetAvailableFunctions 获取已配置的功能列表
+func (m *AIConfigManager) GetAvailableFunctions() []string {
+	if m.config.FunctionModels == nil {
+		return []string{}
+	}
+	
+	var functions []string
+	for function := range m.config.FunctionModels {
+		functions = append(functions, function)
+	}
+	return functions
 }

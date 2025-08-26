@@ -138,12 +138,11 @@ func (c *ImprovedMCPClient) processMCPMessage(msg *mcp.Message) {
 		c.responses[idStr] = msg
 		c.mu.Unlock()
 
-		// 显示响应
+		// 只显示错误信息，不显示成功响应的原始数据
 		if msg.Error != nil {
 			fmt.Printf("❌ 服务器错误: %s\n", msg.Error.Message)
-		} else {
-			fmt.Printf("✅ 服务器响应: %v\n", msg.Result)
 		}
+		// 移除了原始服务器响应的显示，只在CallTool方法中显示格式化结果
 	} else if msg.IsNotification() {
 		fmt.Printf("📢 服务器通知: %s\n", msg.Method)
 	}

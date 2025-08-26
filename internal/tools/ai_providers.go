@@ -30,7 +30,7 @@ func NewBaseProvider(config *config.ProviderConfig) *BaseProvider {
 	return &BaseProvider{
 		config: config,
 		client: &http.Client{
-			Timeout: time.Duration(30) * time.Second,
+			Timeout: time.Duration(120) * time.Second,
 		},
 	}
 }

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"mcp-ai-server/internal/config"
+	"mcp-ai-server/internal/logger"
 	"mcp-ai-server/internal/mcp"
 )
 
@@ -140,152 +141,10 @@ func (c *AITools) GetTools() []mcp.Tool {
 				"required": []string{"prompt"},
 			},
 		},
-		// 2. SQL生成 - 根据自然语言生成SQL，但不执行
-		{
-			Name:        "ai_generate_sql",
-			Description: "根据自然语言描述生成SQL查询语句（仅生成，不执行）",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"description": map[string]interface{}{
-						"type":        "string",
-						"description": "自然语言描述，如'查询所有IT部门的员工'",
-					},
-					"table_name": map[string]interface{}{
-						"type":        "string",
-						"description": "目标表名（可选，系统会自动检测）",
-					},
-					"table_schema": map[string]interface{}{
-						"type":        "string",
-						"description": "表结构信息（可选）",
-					},
-					"provider": map[string]interface{}{
-						"type":        "string",
-						"description": "AI提供商",
-						"enum":        c.configManager.GetAvailableProviders(),
-						"default":     c.configManager.GetDefaultProvider(),
-					},
-					"model": map[string]interface{}{
-						"type":        "string",
-						"description": "使用的模型名称",
-						"default":     c.configManager.GetDefaultModel(),
-					},
-				},
-				"required": []string{"description"},
-			},
-		},
-		// 3. 智能查询 - 统一的智能查询工具（自动检测SQL或自然语言）
-		{
-			Name:        "ai_smart_query",
-			Description: "智能查询：自动检测输入类型（SQL语句或自然语言），生成SQL→执行查询",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"prompt": map[string]interface{}{
-						"type":        "string",
-						"description": "查询描述（可以是自然语言或SQL语句）",
-					},
-					"analysis_mode": map[string]interface{}{
-						"type":        "string",
-						"description": "分析模式: 'full'(生成SQL+执行+分析) 或 'fast'(仅生成SQL+执行)",
-						"enum":        []string{"full", "fast"},
-						"default":     "fast",
-					},
-					"alias": map[string]interface{}{
-						"type":        "string",
-						"description": "数据库连接别名",
-					},
-					"limit": map[string]interface{}{
-						"type":        "integer",
-						"description": "查询结果限制条数",
-						"default":     100,
-					},
-					"table_name": map[string]interface{}{
-						"type":        "string",
-						"description": "目标表名（可选，系统会自动检测）",
-					},
-					"provider": map[string]interface{}{
-						"type":        "string",
-						"description": "AI提供商（仅在使用自然语言时需要）",
-						"enum":        c.configManager.GetAvailableProviders(),
-						"default":     c.configManager.GetDefaultProvider(),
-					},
-					"model": map[string]interface{}{
-						"type":        "string",
-						"description": "使用的模型名称（仅在使用自然语言时需要）",
-						"default":     c.configManager.GetDefaultModel(),
-					},
-				},
-				"required": []string{"prompt"},
-			},
-		},
-		// 4. 直接数据查询 - 通过自然语言直接获取数据库数据
-		{
-			Name:        "ai_query_data",
-			Description: "通过自然语言直接获取数据库数据（生成SQL + 执行，不分析）",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"description": map[string]interface{}{
-						"type":        "string",
-						"description": "自然语言查询描述",
-					},
-					"table_name": map[string]interface{}{
-						"type":        "string",
-						"description": "目标表名（可选，系统会自动检测）",
-					},
-					"limit": map[string]interface{}{
-						"type":        "integer",
-						"description": "查询结果限制条数",
-						"default":     100,
-					},
-					"provider": map[string]interface{}{
-						"type":        "string",
-						"description": "AI提供商",
-						"enum":        c.configManager.GetAvailableProviders(),
-						"default":     c.configManager.GetDefaultProvider(),
-					},
-					"model": map[string]interface{}{
-						"type":        "string",
-						"description": "使用的模型名称",
-						"default":     c.configManager.GetDefaultModel(),
-					},
-				},
-				"required": []string{"description"},
-			},
-		},
-		// 5. 数据分析 - 对已有数据进行AI分析
-		{
-			Name:        "ai_analyze_data",
-			Description: "使用AI分析已有数据并提供洞察",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"data": map[string]interface{}{
-						"type":        "string",
-						"description": "要分析的数据（JSON格式）",
-					},
-					"analysis_type": map[string]interface{}{
-						"type":        "string",
-						"description": "分析类型：summary, insights, recommendations",
-						"enum":        []string{"summary", "insights", "recommendations"},
-						"default":     "summary",
-					},
-					"provider": map[string]interface{}{
-						"type":        "string",
-						"description": "AI提供商",
-						"enum":        c.configManager.GetAvailableProviders(),
-						"default":     c.configManager.GetDefaultProvider(),
-					},
-					"model": map[string]interface{}{
-						"type":        "string",
-						"description": "使用的模型名称",
-						"default":     c.configManager.GetDefaultModel(),
-					},
-				},
-				"required": []string{"data"},
-			},
-		},
+
+
+
+
 		// 6. 数据查询+分析 - 查询数据并进行AI分析
 		{
 			Name:        "ai_query_with_analysis",
@@ -307,45 +166,10 @@ func (c *AITools) GetTools() []mcp.Tool {
 						"type":        "string",
 						"description": "目标表名（可选，系统会自动检测）",
 					},
-					"provider": map[string]interface{}{
+					"alias": map[string]interface{}{
 						"type":        "string",
-						"description": "AI提供商",
-						"enum":        c.configManager.GetAvailableProviders(),
-						"default":     c.configManager.GetDefaultProvider(),
-					},
-					"model": map[string]interface{}{
-						"type":        "string",
-						"description": "使用的模型名称",
-						"default":     c.configManager.GetDefaultModel(),
-					},
-				},
-				"required": []string{"description"},
-			},
-		},
-		// 7. 智能洞察 - 深度智能分析，提供业务洞察和建议
-		{
-			Name:        "ai_smart_insights",
-			Description: "深度智能分析，提供业务洞察和建议",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"prompt": map[string]interface{}{
-						"type":        "string",
-						"description": "分析需求描述",
-					},
-					"context": map[string]interface{}{
-						"type":        "string",
-						"description": "额外的上下文信息",
-					},
-					"insight_level": map[string]interface{}{
-						"type":        "string",
-						"description": "洞察深度：basic, advanced, strategic",
-						"enum":        []string{"basic", "advanced", "strategic"},
-						"default":     "basic",
-					},
-					"table_name": map[string]interface{}{
-						"type":        "string",
-						"description": "目标表名（可选，系统会自动检测）",
+						"description": "数据库连接别名（如demo、mysql_test等）",
+						"enum":        c.databaseConfigMgr.GetAvailableAliases(),
 					},
 					"provider": map[string]interface{}{
 						"type":        "string",
@@ -359,9 +183,10 @@ func (c *AITools) GetTools() []mcp.Tool {
 						"default":     c.configManager.GetDefaultModel(),
 					},
 				},
-				"required": []string{"prompt"},
+				"required": []string{"description", "alias"},
 			},
 		},
+
 		// 7. AI智能文件管理 - 自然语言描述的文件操作
 		{
 			Name:        "ai_file_manager",
@@ -485,44 +310,6 @@ func (c *AITools) GetTools() []mcp.Tool {
 				"required": []string{"instruction"},
 			},
 		},
-		// 10. AI智能系统管理 - 自然语言描述的系统操作
-		{
-			Name:        "ai_system_admin",
-			Description: "AI智能系统管理：使用自然语言描述系统管理需求，AI理解后执行相应的系统操作",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"instruction": map[string]interface{}{
-						"type":        "string",
-						"description": "系统管理指令，如'检查系统状态'、'清理临时文件'等",
-					},
-					"safety_mode": map[string]interface{}{
-						"type":        "string",
-						"description": "安全模式：safe（安全操作）、moderate（中等风险）、advanced（高级操作）",
-						"enum":        []string{"safe", "moderate", "advanced"},
-						"default":     "safe",
-					},
-					"operation_mode": map[string]interface{}{
-						"type":        "string",
-						"description": "操作模式：plan_only（仅分析和规划）或 execute（执行操作）",
-						"enum":        []string{"plan_only", "execute"},
-						"default":     "plan_only",
-					},
-					"provider": map[string]interface{}{
-						"type":        "string",
-						"description": "AI提供商",
-						"enum":        c.configManager.GetAvailableProviders(),
-						"default":     c.configManager.GetDefaultProvider(),
-					},
-					"model": map[string]interface{}{
-						"type":        "string",
-						"description": "使用的模型名称",
-						"default":     c.configManager.GetDefaultModel(),
-					},
-				},
-				"required": []string{"instruction"},
-			},
-		},
 	}
 }
 
@@ -531,26 +318,14 @@ func (c *AITools) ExecuteTool(ctx context.Context, toolName string, arguments ma
 	switch toolName {
 	case "ai_chat":
 		return c.executeAIChat(ctx, arguments)
-	case "ai_generate_sql":
-		return c.executeAIGenerateSQL(ctx, arguments)
-	case "ai_smart_query":
-		return c.executeAISmartQuery(ctx, arguments)
-	case "ai_query_data":
-		return c.executeAIQueryData(ctx, arguments)
-	case "ai_analyze_data":
-		return c.executeAIAnalyzeData(ctx, arguments)
 	case "ai_query_with_analysis":
 		return c.executeAIQueryWithAnalysis(ctx, arguments)
-	case "ai_smart_insights":
-		return c.executeAISmartInsights(ctx, arguments)
 	case "ai_file_manager":
 		return c.executeAIFileManager(ctx, arguments)
 	case "ai_data_processor":
 		return c.executeAIDataProcessor(ctx, arguments)
 	case "ai_api_client":
 		return c.executeAIAPIClient(ctx, arguments)
-	case "ai_system_admin":
-		return c.executeAISystemAdmin(ctx, arguments)
 	default:
 		return nil, fmt.Errorf("未知的AI工具: %s", toolName)
 	}
@@ -563,8 +338,8 @@ func (c *AITools) executeAIChat(ctx context.Context, arguments map[string]interf
 		return nil, fmt.Errorf("prompt参数必须是字符串")
 	}
 
-	// 获取AI提供商
-	provider, model, err := c.getProviderAndModel(arguments)
+	// 获取文本生成专用的AI提供商和模型
+	provider, model, err := c.getProviderAndModelForFunction(arguments, "text_generation")
 	if err != nil {
 		return nil, err
 	}
@@ -580,8 +355,8 @@ func (c *AITools) executeAIChat(ctx context.Context, arguments map[string]interf
 		temperature = temp
 	}
 
-	// 调用AI进行对话
-	response, err := provider.Call(ctx, model, prompt, map[string]interface{}{
+	// 调用AI进行对话（使用超时包装函数）
+	response, err := c.callAIWithTimeout(ctx, provider, model, prompt, map[string]interface{}{
 		"max_tokens":  maxTokens,
 		"temperature": temperature,
 	})
@@ -600,321 +375,9 @@ func (c *AITools) executeAIChat(ctx context.Context, arguments map[string]interf
 }
 
 // 2. SQL生成 - 仅生成SQL，不执行（支持自动检测SQL语句）
-func (c *AITools) executeAIGenerateSQL(ctx context.Context, arguments map[string]interface{}) (*mcp.ToolCallResult, error) {
-	description, ok := arguments["description"].(string)
-	if !ok {
-		return nil, fmt.Errorf("description参数必须是字符串")
-	}
 
-	// 检测输入是否已经是SQL语句
-	if isSQL := c.detectSQL(description); isSQL {
-		// 如果输入已经是SQL，直接返回
-		result := map[string]interface{}{
-			"tool":          "ai_generate_sql",
-			"status":        "success",
-			"description":   description,
-			"generated_sql": description,
-			"input_type":    "direct_sql",
-			"message":       "检测到输入已是SQL语句，直接返回",
-		}
 
-		jsonResponse, _ := json.MarshalIndent(result, "", "  ")
-		return &mcp.ToolCallResult{
-			Content: []mcp.Content{
-				{
-					Type: "text",
-					Text: string(jsonResponse),
-				},
-			},
-		}, nil
-	}
 
-	// 获取AI提供商（仅在需要生成SQL时）
-	provider, model, err := c.getProviderAndModel(arguments)
-	if err != nil {
-		return nil, err
-	}
-
-	// 获取表信息 - 使用智能表名检测或默认表名
-	var tableName string
-	if tn, ok := arguments["table_name"].(string); ok && tn != "" {
-		tableName = tn
-	} else {
-		// 使用智能表名检测
-		defaultTable := c.getDefaultTableName(ctx)
-		detectedTable, err := c.intelligentTableDetection(ctx, description, defaultTable)
-		if err != nil {
-			debugPrintAI("[DEBUG] 智能表名检测失败: %v，使用默认表名: %s\n", err, defaultTable)
-			tableName = defaultTable
-		} else {
-			tableName = detectedTable
-			debugPrintAI("[DEBUG] 智能表名检测成功，使用表名: %s\n", tableName)
-		}
-	}
-
-	tableSchema := ""
-	if ts, ok := arguments["table_schema"].(string); ok {
-		tableSchema = ts
-	}
-
-	// 构建SQL生成提示词
-	var prompt string
-	if tableSchema != "" {
-		prompt = fmt.Sprintf(`表结构信息：
-表名：%s
-字段：%s
-
-请根据以下需求生成SQL查询语句：%s
-
-要求：
-1. 只返回SQL语句，不要任何解释
-2. 确保SQL语法正确
-3. 如果需求不明确，生成一个合理的查询`, tableName, tableSchema, description)
-	} else {
-		// 使用默认字段信息
-		defaultFields := "id, username, email, full_name, age, department, position, salary, is_active, created_at, updated_at"
-		prompt = fmt.Sprintf(`表信息：
-表名：%s
-字段：%s
-
-请根据以下需求生成SQL查询语句：%s
-
-要求：
-1. 只返回SQL语句，不要任何解释
-2. 确保SQL语法正确
-3. 如果需求不明确，生成一个合理的查询`, tableName, defaultFields, description)
-	}
-
-	// 调用AI生成SQL
-	response, err := provider.Call(ctx, model, prompt, map[string]interface{}{
-		"max_tokens":  500,
-		"temperature": 0.3, // 低温度确保SQL准确性
-	})
-	if err != nil {
-		return nil, fmt.Errorf("SQL生成失败: %v", err)
-	}
-
-	debugPrintAI("[GenerateSQL] AI响应: %s\n", response)
-
-	// 提取SQL语句
-	sql := extractSQLFromAIResponse(response)
-	if sql == "" {
-		// 如果提取失败，尝试直接使用响应作为SQL
-		cleanedResponse := strings.TrimSpace(response)
-		cleanedResponse = strings.ReplaceAll(cleanedResponse, "\n", " ")
-		cleanedResponse = strings.ReplaceAll(cleanedResponse, "  ", " ")
-
-		// 如果看起来像SQL，就使用它
-		if strings.Contains(strings.ToUpper(cleanedResponse), "SELECT") &&
-			strings.Contains(strings.ToUpper(cleanedResponse), "FROM") {
-			sql = cleanedResponse
-		}
-	}
-
-	debugPrintAI("[GenerateSQL] 提取的SQL: %s\n", sql)
-
-	if sql == "" {
-		return &mcp.ToolCallResult{
-			Content: []mcp.Content{
-				{
-					Type: "text",
-					Text: fmt.Sprintf("AI无法理解需求描述，原始响应：%s", response),
-				},
-			},
-		}, nil
-	}
-
-	// 返回结构化结果
-	result := map[string]interface{}{
-		"tool":          "ai_generate_sql",
-		"status":        "success",
-		"description":   description,
-		"table_name":    tableName,
-		"generated_sql": sql,
-		"provider":      provider.Name(),
-		"model":         model,
-	}
-
-	jsonResponse, _ := json.MarshalIndent(result, "", "  ")
-	return &mcp.ToolCallResult{
-		Content: []mcp.Content{
-			{
-				Type: "text",
-				Text: string(jsonResponse),
-			},
-		},
-	}, nil
-}
-
-func (c *AITools) executeAIExecuteSQL(ctx context.Context, arguments map[string]interface{}) (*mcp.ToolCallResult, error) {
-	// 步骤1: 接收用户自然语言输入
-	prompt, hasPrompt := arguments["prompt"].(string)
-	if !hasPrompt || prompt == "" {
-		return nil, fmt.Errorf("必须提供prompt参数")
-	}
-
-	// 获取AI提供商（必须使用AI）
-	provider, model, err := c.getProviderAndModel(arguments)
-	if err != nil {
-		debugPrintAI("[DEBUG] 获取AI提供商失败: %v\n", err)
-		return nil, fmt.Errorf("AI不可用: %v", err)
-	}
-
-	debugPrintAI("[DEBUG] 步骤1-2: 接收用户输入: %s\n", prompt)
-
-	// 获取数据库连接别名
-	alias := ""
-	if a, ok := arguments["alias"].(string); ok {
-		alias = a
-	}
-
-	// 获取查询限制
-	limit := 100
-	if l, ok := arguments["limit"].(float64); ok {
-		limit = int(l)
-	}
-
-	// 步骤3: 调用AI生成SQL（使用executeAIGenerateSQL）
-	debugPrintAI("[DEBUG] 步骤3: 开始AI生成SQL...\n")
-	sqlGenArgs := map[string]interface{}{
-		"description": prompt,
-		"provider":    provider.Name(),
-		"model":       model,
-	}
-
-	// 传递表名信息（如果有）
-	if tableName, ok := arguments["table_name"]; ok {
-		sqlGenArgs["table_name"] = tableName
-	}
-	if tableSchema, ok := arguments["table_schema"]; ok {
-		sqlGenArgs["table_schema"] = tableSchema
-	}
-
-	sqlResult, err := c.executeAIGenerateSQL(ctx, sqlGenArgs)
-	if err != nil {
-		return nil, fmt.Errorf("步骤3失败-SQL生成失败: %v", err)
-	}
-
-	// 解析生成的SQL
-	var sqlData map[string]interface{}
-	if err := json.Unmarshal([]byte(sqlResult.Content[0].Text), &sqlData); err != nil {
-		return nil, fmt.Errorf("步骤3失败-解析SQL生成结果失败: %v", err)
-	}
-
-	generatedSQL, ok := sqlData["generated_sql"].(string)
-	if !ok {
-		return nil, fmt.Errorf("步骤3失败-未能从SQL生成结果中提取SQL语句")
-	}
-
-	debugPrintAI("[DEBUG] 步骤3完成: 生成SQL: %s\n", generatedSQL)
-
-	// 步骤4: SQL安全验证
-	debugPrintAI("[DEBUG] 步骤4: 开始SQL安全验证...\n")
-	if err := c.validateSQL(generatedSQL); err != nil {
-		return nil, fmt.Errorf("步骤4失败-SQL安全验证失败: %v", err)
-	}
-
-	// 步骤5-7: 执行数据库查询
-	debugPrintAI("[DEBUG] 步骤5-7: 开始执行数据库查询...\n")
-	var queryResult *mcp.ToolCallResult
-	var queryError error
-
-	if c.databaseTools != nil {
-		// 构建数据库查询参数
-		dbArgs := map[string]interface{}{
-			"sql":   generatedSQL,
-			"limit": limit,
-		}
-
-		// 如果提供了别名，使用指定的数据库连接
-		if alias != "" {
-			dbArgs["alias"] = alias
-		}
-
-		// 调用数据库工具执行查询
-		queryResult, queryError = c.databaseTools.ExecuteTool(ctx, "db_query", dbArgs)
-
-		if queryError != nil {
-			debugPrintAI("[DEBUG] 步骤5-7失败: 数据库查询错误: %v\n", queryError)
-		} else {
-			debugPrintAI("[DEBUG] 步骤5-7完成: 数据库查询成功\n")
-		}
-	} else {
-		queryError = fmt.Errorf("数据库工具不可用")
-		debugPrintAI("[DEBUG] 步骤5-7失败: %v\n", queryError)
-	}
-
-	// 步骤8: 处理查询结果 - 直接返回数据或错误
-	debugPrintAI("[DEBUG] 步骤8: 处理查询结果...\n")
-	var queryData interface{}
-
-	// 如果查询失败，直接返回错误
-	if queryError != nil {
-		debugPrintAI("[DEBUG] 查询失败，直接返回错误: %v\n", queryError)
-		return nil, fmt.Errorf("数据库查询失败: %v", queryError)
-	}
-
-	// 查询成功，解析并返回原始数据
-	if queryResult != nil && len(queryResult.Content) > 0 {
-		// 解析查询结果
-		var dbResponse map[string]interface{}
-		if err := json.Unmarshal([]byte(queryResult.Content[0].Text), &dbResponse); err == nil {
-			queryData = dbResponse
-		} else {
-			queryData = queryResult.Content[0].Text
-		}
-		debugPrintAI("[DEBUG] 查询成功，准备返回原始数据\n")
-	}
-
-	debugPrintAI("[DEBUG] 步骤8完成: 查询结果处理完成\n")
-
-	// 构建最终响应
-	response := map[string]interface{}{
-		"tool":          "ai_smart_sql",
-		"status":        "success",
-		"prompt":        prompt,
-		"generated_sql": generatedSQL,
-		"provider":      provider.Name(),
-		"model":         model,
-		"execution_flow": []string{
-			"1. 接收用户自然语言输入",
-			"2. AI理解用户意图",
-			"3. AI生成SQL查询语句",
-			"4. SQL安全验证",
-			"5. 使用预配置数据库连接",
-			"6. 执行SQL查询",
-			"7. 获取查询结果",
-			"8. 返回原始查询数据",
-		},
-	}
-
-	// 添加查询执行信息和原始数据
-	response["query_execution"] = map[string]interface{}{
-		"success": true,
-	}
-	if queryData != nil {
-		response["query_data"] = queryData
-	}
-
-	// 添加技术细节（用于调试）
-	response["technical_details"] = map[string]interface{}{
-		"sql_validation": "passed",
-		"database_alias": alias,
-		"query_limit":    limit,
-		"ai_provider":    provider.Name(),
-		"ai_model":       model,
-	}
-
-	jsonResponse, _ := json.MarshalIndent(response, "", "  ")
-	return &mcp.ToolCallResult{
-		Content: []mcp.Content{
-			{
-				Type: "text",
-				Text: string(jsonResponse),
-			},
-		},
-	}, nil
-}
 
 // validateSQL SQL安全验证方法 - 本地调试版本（宽松验证）
 func (c *AITools) validateSQL(sql string) error {
@@ -946,260 +409,7 @@ func (c *AITools) validateSQL(sql string) error {
 	return nil
 }
 
-// 3. 智能查询 - 统一的智能查询工具（自动检测SQL或自然语言）
-func (c *AITools) executeAISmartQuery(ctx context.Context, arguments map[string]interface{}) (*mcp.ToolCallResult, error) {
-	debugPrintAI("[DEBUG] ====== executeAISmartQuery 开始 ======\n")
-	debugPrintAI("[DEBUG] 接收到的参数: %+v\n", arguments)
 
-	// 步骤1: 接收用户输入
-	prompt, hasPrompt := arguments["prompt"].(string)
-	if !hasPrompt || prompt == "" {
-		debugPrintAI("[DEBUG] ERROR: prompt参数缺失或为空\n")
-		return nil, fmt.Errorf("必须提供prompt参数")
-	}
-
-	debugPrintAI("[DEBUG] 步骤1完成 - 输入prompt: '%s'\n", prompt)
-
-	// 步骤2: 自动检测输入类型
-	isDirectSQL := c.detectSQL(prompt)
-	debugPrintAI("[DEBUG] 步骤2完成 - SQL检测结果: %v\n", isDirectSQL)
-
-	// 获取通用参数
-	alias := ""
-	if a, ok := arguments["alias"].(string); ok {
-		alias = a
-	}
-
-	limit := 100
-	if l, ok := arguments["limit"].(float64); ok {
-		limit = int(l)
-	}
-
-	analysisMode := "fast"
-	if mode, ok := arguments["analysis_mode"].(string); ok {
-		analysisMode = mode
-	}
-
-	tableName := "mcp_user"
-	if tn, ok := arguments["table_name"].(string); ok && tn != "" {
-		tableName = tn
-	} else {
-		// 如果没有指定表名，使用智能表名识别
-		debugPrintAI("[DEBUG] 未指定表名，启动智能表名识别\n")
-		detectedTable, err := c.intelligentTableDetection(ctx, prompt, tableName)
-		if err != nil {
-			debugPrintAI("[DEBUG] 智能表名识别失败: %v，使用默认表名: %s\n", err, tableName)
-		} else {
-			tableName = detectedTable
-			debugPrintAI("[DEBUG] 智能表名识别成功，使用表名: %s\n", tableName)
-		}
-	}
-
-	debugPrintAI("[DEBUG] 参数解析完成 - alias: '%s', limit: %d, analysisMode: '%s', tableName: '%s'\n",
-		alias, limit, analysisMode, tableName)
-
-	var finalSQL string
-	var inputType string
-
-	// 步骤3: 根据输入类型处理
-	if isDirectSQL {
-		// 场景1：直接SQL执行
-		debugPrintAI("[DEBUG] 步骤3 - 进入直接SQL模式\n")
-		finalSQL = prompt
-		inputType = "direct_sql"
-		debugPrintAI("[DEBUG] 步骤3完成 - 直接使用SQL: '%s'\n", finalSQL)
-	} else {
-		// 场景2：自然语言查询（需要AI生成SQL）
-		debugPrintAI("[DEBUG] 步骤3 - 进入自然语言模式，需要AI生成SQL\n")
-
-		// 获取AI提供商（仅在需要生成SQL时）
-		provider, model, err := c.getProviderAndModel(arguments)
-		if err != nil {
-			debugPrintAI("[DEBUG] ERROR: 获取AI提供商失败: %v\n", err)
-			return nil, fmt.Errorf("AI不可用（自然语言查询需要AI支持）: %v", err)
-		}
-		debugPrintAI("[DEBUG] AI提供商获取成功 - provider: %s, model: %s\n", provider.Name(), model)
-
-		// 调用AI生成SQL
-		sqlGenArgs := map[string]interface{}{
-			"description": prompt,
-			"table_name":  tableName,
-			"provider":    provider.Name(),
-			"model":       model,
-		}
-		debugPrintAICompatible("[DEBUG] 准备调用executeAIGenerateSQL，参数: %+v\n", sqlGenArgs)
-
-		sqlResult, err := c.executeAIGenerateSQL(ctx, sqlGenArgs)
-		if err != nil {
-			debugPrintAICompatible("[DEBUG] ERROR: SQL生成失败: %v\n", err)
-			return nil, fmt.Errorf("SQL生成失败: %v", err)
-		}
-		debugPrintAICompatible("[DEBUG] executeAIGenerateSQL调用成功，返回内容长度: %d\n", len(sqlResult.Content[0].Text))
-
-		// 解析生成的SQL
-		var sqlData map[string]interface{}
-		if err := json.Unmarshal([]byte(sqlResult.Content[0].Text), &sqlData); err != nil {
-			debugPrintAICompatible("[DEBUG] ERROR: 解析SQL生成结果失败: %v\n", err)
-			debugPrintAICompatible("[DEBUG] 原始SQL生成结果: %s\n", sqlResult.Content[0].Text)
-			return nil, fmt.Errorf("解析SQL生成结果失败: %v", err)
-		}
-		debugPrintAICompatible("[DEBUG] SQL生成结果解析成功: %+v\n", sqlData)
-
-		generatedSQL, ok := sqlData["generated_sql"].(string)
-		if !ok {
-			debugPrintAICompatible("[DEBUG] ERROR: 无法提取generated_sql字段\n")
-			debugPrintAICompatible("[DEBUG] sqlData内容: %+v\n", sqlData)
-			return nil, fmt.Errorf("未能从SQL生成结果中提取SQL语句")
-		}
-
-		if generatedSQL == "" {
-			debugPrintAICompatible("[DEBUG] ERROR: generated_sql字段为空\n")
-			debugPrintAICompatible("[DEBUG] sqlData内容: %+v\n", sqlData)
-			return nil, fmt.Errorf("生成的SQL语句为空")
-		}
-
-		finalSQL = generatedSQL
-		inputType = "natural_language"
-		debugPrintAICompatible("[DEBUG] 步骤3完成 - AI生成SQL: '%s'\n", finalSQL)
-	}
-
-	// 步骤4: SQL安全验证
-	debugPrintAICompatible("[DEBUG] 步骤4 - 开始SQL安全验证，SQL: '%s'\n", finalSQL)
-	if err := c.validateSQL(finalSQL); err != nil {
-		debugPrintAICompatible("[DEBUG] ERROR: SQL安全验证失败: %v\n", err)
-		return nil, fmt.Errorf("SQL安全验证失败: %v", err)
-	}
-	debugPrintAICompatible("[DEBUG] 步骤4完成 - SQL安全验证通过\n")
-
-	// 步骤5: 执行数据库查询
-	debugPrintAICompatible("[DEBUG] 步骤5 - 开始执行数据库查询\n")
-	var queryResult *mcp.ToolCallResult
-	var queryError error
-
-	if c.databaseTools != nil {
-		debugPrintAICompatible("[DEBUG] 数据库工具可用，准备执行查询\n")
-		dbArgs := map[string]interface{}{
-			"sql":   finalSQL,
-			"limit": limit,
-		}
-
-		// 设置数据库别名，如果没有提供则使用默认值
-		if alias != "" {
-			dbArgs["alias"] = alias
-			debugPrintAICompatible("[DEBUG] 使用指定的数据库别名: %s\n", alias)
-		} else {
-			// 使用配置文件中的默认数据库别名
-			dbArgs["alias"] = "mysql_test"
-			debugPrintAICompatible("[DEBUG] 使用默认数据库别名: mysql_test\n")
-		}
-
-		debugPrintAICompatible("[DEBUG] 数据库查询参数: %+v\n", dbArgs)
-		queryResult, queryError = c.databaseTools.ExecuteTool(ctx, "db_query", dbArgs)
-
-		if queryError != nil {
-			debugPrintAICompatible("[DEBUG] ERROR: 数据库查询失败: %v\n", queryError)
-		} else {
-			debugPrintAICompatible("[DEBUG] 数据库查询成功，结果长度: %d\n", len(queryResult.Content[0].Text))
-		}
-	} else {
-		queryError = fmt.Errorf("数据库工具不可用")
-		debugPrintAICompatible("[DEBUG] ERROR: 数据库工具不可用\n")
-	}
-
-	// 步骤6: 构建响应
-	debugPrintAICompatible("[DEBUG] 步骤6 - 开始构建响应\n")
-	result := map[string]interface{}{
-		"tool":          "ai_smart_query",
-		"status":        "success",
-		"input_type":    inputType,
-		"prompt":        prompt,
-		"sql":           finalSQL,
-		"analysis_mode": analysisMode,
-		"limit":         limit,
-		"row_count":     0,
-	}
-
-	if alias != "" {
-		result["alias"] = alias
-	}
-
-	if inputType == "natural_language" {
-		result["table_name"] = tableName
-	}
-
-	debugPrintAICompatible("[DEBUG] 基础响应结构创建完成\n")
-
-	// 处理查询结果
-	if queryError != nil {
-		result["status"] = "error"
-		result["error"] = queryError.Error()
-		debugPrintAICompatible("[DEBUG] ERROR: 设置错误状态，错误信息: %v\n", queryError)
-	} else if queryResult != nil {
-		debugPrintAICompatible("[DEBUG] 开始解析数据库查询结果\n")
-		// 解析数据库查询结果
-		var dbResponse map[string]interface{}
-		if err := json.Unmarshal([]byte(queryResult.Content[0].Text), &dbResponse); err == nil {
-			debugPrintAICompatible("[DEBUG] 数据库结果解析成功: %+v\n", dbResponse)
-
-			if dbResult, ok := dbResponse["result"].(map[string]interface{}); ok {
-				result["result"] = dbResult
-				if rowCount, ok := dbResult["row_count"]; ok {
-					result["row_count"] = rowCount
-					debugPrintAICompatible("[DEBUG] 设置行数: %v\n", rowCount)
-				}
-				if columns, ok := dbResult["columns"]; ok {
-					result["columns"] = columns
-					debugPrintAICompatible("[DEBUG] 设置列信息，列数: %d\n", len(columns.([]interface{})))
-				}
-				if rows, ok := dbResult["rows"]; ok {
-					result["rows"] = rows
-					debugPrintAICompatible("[DEBUG] 设置行数据，行数: %d\n", len(rows.([]interface{})))
-				}
-				if limited, ok := dbResult["limited"]; ok {
-					result["limited"] = limited
-				}
-			} else {
-				result["raw_result"] = dbResponse
-				debugPrintAICompatible("[DEBUG] 使用原始结果格式\n")
-			}
-
-			// 步骤7: 可选AI分析
-			if analysisMode == "full" && inputType == "natural_language" {
-				debugPrintAICompatible("[DEBUG] 步骤7 - 开始执行AI分析\n")
-
-				// 获取AI提供商进行分析
-				if provider, model, err := c.getProviderAndModel(arguments); err == nil {
-					analysisResult := c.analyzeQueryResult(ctx, provider, model, prompt, finalSQL, queryResult.Content[0].Text, nil)
-					result["ai_analysis"] = analysisResult
-					debugPrintAICompatible("[DEBUG] AI分析完成，结果长度: %d\n", len(analysisResult))
-				} else {
-					debugPrintAICompatible("[DEBUG] WARNING: AI分析跳过，无法获取AI提供商: %v\n", err)
-				}
-			} else {
-				debugPrintAICompatible("[DEBUG] 跳过AI分析 - analysisMode: %s, inputType: %s\n", analysisMode, inputType)
-			}
-		} else {
-			result["status"] = "error"
-			result["error"] = fmt.Sprintf("解析数据库结果失败: %v", err)
-			debugPrintAICompatible("[DEBUG] ERROR: 解析数据库结果失败: %v\n", err)
-			debugPrintAICompatible("[DEBUG] 原始数据库结果: %s\n", queryResult.Content[0].Text)
-		}
-	} else {
-		debugPrintAICompatible("[DEBUG] WARNING: queryResult为nil\n")
-	}
-
-	debugPrintAICompatible("[DEBUG] 响应构建完成，最终结果状态: %s\n", result["status"])
-	jsonResponse, _ := json.MarshalIndent(result, "", "  ")
-	debugPrintAICompatible("[DEBUG] ====== executeAISmartQuery 结束 ======\n")
-	return &mcp.ToolCallResult{
-		Content: []mcp.Content{
-			{
-				Type: "text",
-				Text: string(jsonResponse),
-			},
-		},
-	}, nil
-}
 
 // 辅助方法：获取AI提供商和模型
 func (c *AITools) getProviderAndModel(arguments map[string]interface{}) (AIProvider, string, error) {
@@ -1223,69 +433,150 @@ func (c *AITools) getProviderAndModel(arguments map[string]interface{}) (AIProvi
 	return provider, model, nil
 }
 
-// executeAIAnalyzeData 执行AI数据分析
-func (c *AITools) executeAIAnalyzeData(ctx context.Context, arguments map[string]interface{}) (*mcp.ToolCallResult, error) {
-	data, ok := arguments["data"].(string)
+// getProviderAndModelForFunction 根据功能获取提供商和模型
+func (c *AITools) getProviderAndModelForFunction(arguments map[string]interface{}, function string) (AIProvider, string, error) {
+	// 优先使用参数中指定的提供商和模型
+	if p, ok := arguments["provider"].(string); ok && p != "" {
+		if m, ok := arguments["model"].(string); ok && m != "" {
+			provider, exists := c.getProvider(p)
+			if !exists || !provider.IsEnabled() {
+				return nil, "", fmt.Errorf("AI提供商 %s 不可用或未启用", p)
+			}
+			return provider, m, nil
+		}
+	}
+
+	// 使用功能特定的模型配置
+	providerName, model, exists := c.configManager.GetFunctionModel(function)
+	if !exists {
+		// 如果没有找到功能特定配置，使用默认配置
+		providerName = c.configManager.GetDefaultProvider()
+		model = c.configManager.GetDefaultModel()
+	}
+
+	provider, exists := c.getProvider(providerName)
+	if !exists || !provider.IsEnabled() {
+		return nil, "", fmt.Errorf("AI提供商 %s 不可用或未启用", providerName)
+	}
+
+	return provider, model, nil
+}
+
+// callAIWithTimeout 带超时和重试的AI调用包装函数
+func (c *AITools) callAIWithTimeout(ctx context.Context, provider AIProvider, model, prompt string, options map[string]interface{}) (string, error) {
+	// 创建带超时的上下文
+	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	defer cancel()
+
+	// 添加重试机制
+	maxRetries := 2
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		if attempt > 0 {
+			log.Printf("AI调用重试 %d/%d", attempt, maxRetries)
+			time.Sleep(time.Duration(attempt) * 2 * time.Second) // 指数退避
+		}
+
+		response, err := provider.Call(ctx, model, prompt, options)
+		if err == nil {
+			return response, nil
+		}
+
+		// 检查是否是超时错误
+		if ctx.Err() == context.DeadlineExceeded {
+			log.Printf("AI调用超时，尝试 %d/%d: %v", attempt+1, maxRetries+1, err)
+			if attempt == maxRetries {
+				return "", fmt.Errorf("AI调用超时，已重试%d次: %v", maxRetries, err)
+			}
+			continue
+		}
+
+		// 其他错误，直接返回
+		log.Printf("AI调用失败，尝试 %d/%d: %v", attempt+1, maxRetries+1, err)
+		if attempt == maxRetries {
+			return "", fmt.Errorf("AI调用失败，已重试%d次: %v", maxRetries, err)
+		}
+	}
+
+	return "", fmt.Errorf("AI调用失败，已达到最大重试次数")
+}
+
+// executeAIGenerateSQL 根据描述生成SQL语句
+func (c *AITools) executeAIGenerateSQL(ctx context.Context, arguments map[string]interface{}) (*mcp.ToolCallResult, error) {
+	description, ok := arguments["description"].(string)
 	if !ok {
-		return nil, fmt.Errorf("data参数必须是字符串")
+		return nil, fmt.Errorf("description参数必须是字符串")
 	}
 
-	analysisType := "summary"
-	if at, ok := arguments["analysis_type"].(string); ok {
-		analysisType = at
-	}
-
-	// 获取AI提供商
-	provider, model, err := c.getProviderAndModel(arguments)
+	// 获取SQL生成专用的AI提供商和模型
+	provider, model, err := c.getProviderAndModelForFunction(arguments, "sql_generation")
 	if err != nil {
 		return nil, err
 	}
 
-	// 构建中文分析提示词
-	var prompt string
-	switch analysisType {
-	case "summary":
-		prompt = fmt.Sprintf("请用中文分析以下数据并提供摘要。请直接返回分析结果，不要包含额外的格式化字符：\n%s", data)
-	case "insights":
-		prompt = fmt.Sprintf("请用中文分析以下数据并提供洞察和发现。请直接返回分析结果，不要包含额外的格式化字符：\n%s", data)
-	case "recommendations":
-		prompt = fmt.Sprintf("请用中文分析以下数据并提供建议和推荐。请直接返回分析结果，不要包含额外的格式化字符：\n%s", data)
-	case "detailed":
-		prompt = fmt.Sprintf("请用中文对以下数据进行详细分析。请直接返回分析结果，不要包含额外的格式化字符：\n%s", data)
-	default:
-		prompt = fmt.Sprintf("请用中文分析以下数据。请直接返回分析结果，不要包含额外的格式化字符：\n%s", data)
+	// 获取表名 - 使用智能表名检测或默认表名
+	var tableName string
+	if tn, ok := arguments["table_name"].(string); ok && tn != "" {
+		tableName = tn
+	} else {
+		// 使用智能表名检测
+		defaultTable := c.getDefaultTableName(ctx)
+		detectedTable, err := c.intelligentTableDetection(ctx, description, defaultTable)
+		if err != nil {
+			debugPrintAICompatible("[DEBUG] 智能表名检测失败: %v，使用默认表名: %s\n", err, defaultTable)
+			tableName = defaultTable
+		} else {
+			tableName = detectedTable
+			debugPrintAICompatible("[DEBUG] 智能表名检测成功，使用表名: %s\n", tableName)
+		}
 	}
 
-	// 调用AI提供商
-	response, err := provider.Call(ctx, model, prompt, map[string]interface{}{
-		"max_tokens": c.configManager.GetCommonConfig().MaxTokens,
+	// 构建SQL生成提示
+	prompt := fmt.Sprintf(`请根据以下描述生成SQL查询语句：
+
+描述：%s
+表名：%s
+
+要求：
+1. 只返回SQL语句，不要其他解释
+2. 使用标准SQL语法
+3. 确保查询安全，避免SQL注入
+4. 如果需要限制结果数量，默认使用LIMIT 100
+
+SQL：`, description, tableName)
+
+	// 调用AI生成SQL
+	aiResponse, err := c.callAIWithTimeout(ctx, provider, model, prompt, map[string]interface{}{
+		"max_tokens":  500,
+		"temperature": 0.1,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("数据分析失败: %v", err)
+		return nil, fmt.Errorf("AI生成SQL失败: %v", err)
 	}
 
-	// 增强的清理AI响应格式
-	cleanedResponse := cleanAIResponse(response)
-
-	// 进一步清理可能的JSON转义字符
-	cleanedResponse = strings.ReplaceAll(cleanedResponse, "\\n", "\n")
-	cleanedResponse = strings.ReplaceAll(cleanedResponse, "\\\"", "\"")
-	cleanedResponse = strings.ReplaceAll(cleanedResponse, "\\\\", "\\")
-
-	// 移除开头和结尾的引号（如果存在）
-	cleanedResponse = strings.Trim(cleanedResponse, "\"")
-
-	// 构建结构化响应
-	result := map[string]interface{}{
-		"tool":          "ai_analyze_data",
-		"status":        "success",
-		"analysis_type": analysisType,
-		"provider":      provider.Name(),
-		"model":         model,
-		"analysis":      cleanedResponse,
+	// 提取SQL语句
+	generatedSQL := extractSQLFromAIResponse(aiResponse)
+	if generatedSQL == "" {
+		return nil, fmt.Errorf("无法从AI响应中提取有效的SQL语句")
 	}
 
-	jsonResponse, _ := json.MarshalIndent(result, "", "  ")
+	// 验证SQL安全性
+	if err := c.validateSQL(generatedSQL); err != nil {
+		return nil, fmt.Errorf("生成的SQL不安全: %v", err)
+	}
+
+	// 构建响应
+	response := map[string]interface{}{
+		"tool":        "ai_generate_sql",
+		"status":      "success",
+		"description": description,
+		"table_name":  tableName,
+		"provider":    provider.Name(),
+		"model":       model,
+		"sql":         generatedSQL,
+		"ai_response": aiResponse,
+	}
+
+	jsonResponse, _ := json.MarshalIndent(response, "", "  ")
 	return &mcp.ToolCallResult{
 		Content: []mcp.Content{
 			{
@@ -1295,6 +586,180 @@ func (c *AITools) executeAIAnalyzeData(ctx context.Context, arguments map[string
 		},
 	}, nil
 }
+
+// executeAIExecuteSQL 执行SQL并返回结果
+func (c *AITools) executeAIExecuteSQL(ctx context.Context, arguments map[string]interface{}) (*mcp.ToolCallResult, error) {
+	sql, ok := arguments["sql"].(string)
+	if !ok {
+		return nil, fmt.Errorf("sql参数必须是字符串")
+	}
+
+	// 验证SQL安全性
+	if err := c.validateSQL(sql); err != nil {
+		return nil, fmt.Errorf("SQL不安全: %v", err)
+	}
+
+	// 获取数据库别名
+	alias, ok := arguments["alias"].(string)
+	if !ok || alias == "" {
+		return nil, fmt.Errorf("alias参数必须是非空字符串")
+	}
+
+	// 执行SQL查询
+	queryArgs := map[string]interface{}{
+		"alias": alias,
+		"sql":   sql,
+		"limit": 100, // 默认限制
+	}
+
+	if limit, ok := arguments["limit"].(int); ok {
+		queryArgs["limit"] = limit
+	}
+
+	// 使用数据库工具执行查询
+	result, err := c.databaseTools.ExecuteTool(ctx, "db_query", queryArgs)
+	if err != nil {
+		return nil, fmt.Errorf("SQL执行失败: %v", err)
+	}
+
+	// 构建响应
+	response := map[string]interface{}{
+		"tool":   "ai_execute_sql",
+		"status": "success",
+		"sql":    sql,
+		"alias":  alias,
+		"result": result.Content[0].Text,
+	}
+
+	jsonResponse, _ := json.MarshalIndent(response, "", "  ")
+	return &mcp.ToolCallResult{
+		Content: []mcp.Content{
+			{
+				Type: "text",
+				Text: string(jsonResponse),
+			},
+		},
+	}, nil
+}
+
+// executeAISmartQuery 智能查询 - 生成SQL并执行，带AI分析
+func (c *AITools) executeAISmartQuery(ctx context.Context, arguments map[string]interface{}) (*mcp.ToolCallResult, error) {
+	prompt, ok := arguments["prompt"].(string)
+	if !ok {
+		return nil, fmt.Errorf("prompt参数必须是字符串")
+	}
+
+	// 获取数据分析专用的AI提供商和模型
+	provider, model, err := c.getProviderAndModelForFunction(arguments, "data_analysis")
+	if err != nil {
+		return nil, err
+	}
+
+	// 获取分析模式
+	analysisMode := "full"
+	if am, ok := arguments["analysis_mode"].(string); ok {
+		analysisMode = am
+	}
+
+	// 第一步：生成SQL
+	sqlGenArgs := map[string]interface{}{
+		"description": prompt,
+		"provider":    provider.Name(),
+		"model":       model,
+	}
+	if tableName, ok := arguments["table_name"]; ok {
+		sqlGenArgs["table_name"] = tableName
+	}
+
+	log.Printf("[AISmartQuery] 开始生成SQL，提示：%s", prompt)
+
+	sqlResult, err := c.executeAIGenerateSQL(ctx, sqlGenArgs)
+	if err != nil {
+		return nil, fmt.Errorf("SQL生成失败: %v", err)
+	}
+
+	// 解析SQL生成结果
+	var sqlData map[string]interface{}
+	if err := json.Unmarshal([]byte(sqlResult.Content[0].Text), &sqlData); err != nil {
+		return nil, fmt.Errorf("解析SQL生成结果失败: %v", err)
+	}
+
+	generatedSQL, ok := sqlData["sql"].(string)
+	if !ok {
+		return nil, fmt.Errorf("无法从SQL生成结果中获取SQL语句")
+	}
+
+	log.Printf("[AISmartQuery] SQL生成完成：%s", generatedSQL)
+
+	// 第二步：执行SQL
+	execArgs := map[string]interface{}{
+		"sql": generatedSQL,
+	}
+	if alias, ok := arguments["alias"]; ok {
+		execArgs["alias"] = alias
+	}
+	if limit, ok := arguments["limit"]; ok {
+		execArgs["limit"] = limit
+	}
+
+	log.Printf("[AISmartQuery] 开始执行SQL")
+
+	execResult, err := c.executeAIExecuteSQL(ctx, execArgs)
+	var dbResult string
+	var queryError error
+
+	if err != nil {
+		queryError = err
+		dbResult = fmt.Sprintf("查询执行失败: %v", err)
+		log.Printf("[AISmartQuery] SQL执行失败: %v", err)
+	} else {
+		dbResult = execResult.Content[0].Text
+		log.Printf("[AISmartQuery] SQL执行成功")
+	}
+
+	// 第三步：AI分析（根据分析模式）
+	var analysis string
+	if analysisMode == "fast" {
+		// 快速模式：只返回查询结果，不进行AI分析
+		analysis = "快速模式：跳过AI分析"
+	} else {
+		// 完整模式：进行AI分析
+		log.Printf("[AISmartQuery] 开始AI分析")
+		analysis = c.analyzeQueryResult(ctx, provider, model, prompt, generatedSQL, dbResult, queryError)
+		log.Printf("[AISmartQuery] AI分析完成")
+	}
+
+	// 构建响应
+	response := map[string]interface{}{
+		"tool":           "ai_smart_query",
+		"status":         "success",
+		"prompt":         prompt,
+		"provider":       provider.Name(),
+		"model":          model,
+		"analysis_mode":  analysisMode,
+		"generated_sql":  generatedSQL,
+		"query_result":   dbResult,
+		"ai_analysis":    analysis,
+		"has_error":      queryError != nil,
+	}
+
+	if queryError != nil {
+		response["error"] = queryError.Error()
+	}
+
+	jsonResponse, _ := json.MarshalIndent(response, "", "  ")
+	return &mcp.ToolCallResult{
+		Content: []mcp.Content{
+			{
+				Type: "text",
+				Text: string(jsonResponse),
+			},
+		},
+	}, nil
+}
+
+// executeAIAnalyzeData 执行AI数据分析
+
 
 // executeAIAnalyzeDataWithChinesePrompt 专门用于中文分析的方法
 func (c *AITools) executeAIAnalyzeDataWithChinesePrompt(ctx context.Context, arguments map[string]interface{}) (*mcp.ToolCallResult, error) {
@@ -1308,8 +773,8 @@ func (c *AITools) executeAIAnalyzeDataWithChinesePrompt(ctx context.Context, arg
 		analysisType = at
 	}
 
-	// 获取AI提供商
-	provider, model, err := c.getProviderAndModel(arguments)
+	// 获取数据分析专用的AI提供商和模型
+	provider, model, err := c.getProviderAndModelForFunction(arguments, "data_analysis")
 	if err != nil {
 		return nil, err
 	}
@@ -1459,8 +924,8 @@ AI生成的SQL：%s
 4. 优化建议：如何改进查询效率或扩展分析维度？`, prompt, generatedSQL)
 	}
 
-	// 调用AI进行分析
-	analysisResponse, err := provider.Call(ctx, model, analysisPrompt, map[string]interface{}{
+	// 调用AI进行分析（使用超时包装函数）
+	analysisResponse, err := c.callAIWithTimeout(ctx, provider, model, analysisPrompt, map[string]interface{}{
 		"max_tokens":  1000,
 		"temperature": 0.5,
 	})
@@ -1494,6 +959,10 @@ func extractSQLFromAIResponse(aiResponse string) string {
 
 		// 检测是否包含SELECT语句（不在代码块内）
 		if !inSQLBlock && strings.Contains(strings.ToUpper(line), "SELECT") {
+			// 提取分号前的部分，避免包含注释
+			if idx := strings.Index(line, ";"); idx != -1 {
+				line = line[:idx+1]
+			}
 			sqlLines = append(sqlLines, line)
 		}
 	}
@@ -1502,142 +971,36 @@ func extractSQLFromAIResponse(aiResponse string) string {
 	if len(sqlLines) == 0 {
 		for _, line := range lines {
 			if strings.Contains(strings.ToUpper(line), "SELECT") {
+				// 提取分号前的部分，避免包含注释
+				if idx := strings.Index(line, ";"); idx != -1 {
+					line = line[:idx+1]
+				}
 				sqlLines = append(sqlLines, strings.TrimSpace(line))
+				break // 只取第一个有效的SQL语句
 			}
 		}
 	}
 
-	// 合并SQL行
+	// 合并SQL行并进一步清理
 	if len(sqlLines) > 0 {
-		return strings.Join(sqlLines, " ")
+		sql := strings.Join(sqlLines, " ")
+		// 移除可能的多余文本
+		if idx := strings.Index(sql, ";"); idx != -1 {
+			sql = sql[:idx+1]
+		}
+		return strings.TrimSpace(sql)
 	}
 
 	return ""
 }
 
-// 4. 直接数据查询 - 通过自然语言直接获取数据库数据
-func (c *AITools) executeAIQueryData(ctx context.Context, arguments map[string]interface{}) (*mcp.ToolCallResult, error) {
-	description, ok := arguments["description"].(string)
-	if !ok {
-		return nil, fmt.Errorf("description参数必须是字符串")
-	}
-
-	// 获取AI提供商
-	provider, model, err := c.getProviderAndModel(arguments)
-	if err != nil {
-		return nil, err
-	}
-
-	// 获取表信息 - 使用智能表名检测或默认表名
-	var tableName string
-	if tn, ok := arguments["table_name"].(string); ok && tn != "" {
-		tableName = tn
-	} else {
-		// 使用智能表名检测
-		defaultTable := c.getDefaultTableName(ctx)
-		detectedTable, err := c.intelligentTableDetection(ctx, description, defaultTable)
-		if err != nil {
-			debugPrintAICompatible("[DEBUG] 智能表名检测失败: %v，使用默认表名: %s\n", err, defaultTable)
-			tableName = defaultTable
-		} else {
-			tableName = detectedTable
-			debugPrintAICompatible("[DEBUG] 智能表名检测成功，使用表名: %s\n", tableName)
-		}
-	}
-
-	// 第一步：生成SQL
-	sqlGenArgs := map[string]interface{}{
-		"description": description,
-		"table_name":  tableName,
-		"provider":    provider.Name(),
-		"model":       model,
-	}
-	sqlResult, err := c.executeAIGenerateSQL(ctx, sqlGenArgs)
-	if err != nil {
-		return nil, fmt.Errorf("SQL生成失败: %v", err)
-	}
-
-	// 解析生成的SQL
-	var sqlData map[string]interface{}
-	if err := json.Unmarshal([]byte(sqlResult.Content[0].Text), &sqlData); err != nil {
-		return nil, fmt.Errorf("解析SQL生成结果失败: %v", err)
-	}
-
-	generatedSQL, ok := sqlData["generated_sql"].(string)
-	if !ok {
-		return nil, fmt.Errorf("未能从SQL生成结果中提取SQL语句")
-	}
-
-	// 第二步：执行SQL（调用AI智能查询）
-	execArgs := map[string]interface{}{
-		"prompt":     description,
-		"table_name": tableName,
-		"provider":   provider.Name(),
-		"model":      model,
-	}
-
-	// 传递limit参数（如果有）
-	if limit, ok := arguments["limit"]; ok {
-		execArgs["limit"] = limit
-	}
-
-	// 传递alias参数（如果有）
-	if alias, ok := arguments["alias"]; ok {
-		execArgs["alias"] = alias
-	}
-
-	execResult, err := c.executeAIExecuteSQL(ctx, execArgs)
-
-	// 构建响应
-	response := map[string]interface{}{
-		"tool":          "ai_query_data",
-		"status":        "success",
-		"description":   description,
-		"table_name":    tableName,
-		"generated_sql": generatedSQL,
-		"provider":      provider.Name(),
-		"model":         model,
-	}
-
-	// 处理SQL执行结果
-	if err != nil {
-		response["status"] = "error"
-		response["execution"] = map[string]interface{}{
-			"success": false,
-			"error":   err.Error(),
-		}
-	} else {
-		response["execution"] = map[string]interface{}{
-			"success": true,
-		}
-
-		// 解析执行结果
-		if execResult != nil && len(execResult.Content) > 0 {
-			var execData map[string]interface{}
-			if err := json.Unmarshal([]byte(execResult.Content[0].Text), &execData); err == nil {
-				if result, ok := execData["result"]; ok {
-					response["data"] = result
-				}
-				if rowCount, ok := execData["row_count"]; ok {
-					response["execution"].(map[string]interface{})["row_count"] = rowCount
-				}
-			}
-		}
-	}
-
-	jsonResponse, _ := json.MarshalIndent(response, "", "  ")
-	return &mcp.ToolCallResult{
-		Content: []mcp.Content{
-			{
-				Type: "text",
-				Text: string(jsonResponse),
-			},
-		},
-	}, nil
-}
-
 // 6. 数据查询+分析 - 查询数据并进行AI分析
 func (c *AITools) executeAIQueryWithAnalysis(ctx context.Context, arguments map[string]interface{}) (*mcp.ToolCallResult, error) {
+	// 记录总体开始时间
+	totalStartTime := time.Now()
+	log.Printf("[QueryWithAnalysis] ⏱️  总体开始时间: %s", totalStartTime.Format("15:04:05.000"))
+	logger.Performance("🚀 [性能] ai_query_with_analysis 开始执行 - 开始时间: %s", totalStartTime.Format("15:04:05.000"))
+
 	description, ok := arguments["description"].(string)
 	if !ok {
 		return nil, fmt.Errorf("description参数必须是字符串")
@@ -1648,104 +1011,158 @@ func (c *AITools) executeAIQueryWithAnalysis(ctx context.Context, arguments map[
 		analysisType = at
 	}
 
-	// 第一步：使用智能查询获取数据
-	queryArgs := map[string]interface{}{
-		"prompt":        description,
-		"analysis_mode": "fast", // 只需要查询数据，不需要在这里分析
+	// 获取SQL生成专用的AI提供商和模型
+	sqlProvider, sqlModel, err := c.getProviderAndModelForFunction(arguments, "sql_generation")
+	if err != nil {
+		return nil, err
+	}
+
+	// 获取数据分析专用的AI提供商和模型
+	analysisProvider, analysisModel, err := c.getProviderAndModelForFunction(arguments, "data_analysis")
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("[QueryWithAnalysis] 🚀 开始查询和分析，描述：%s，分析类型：%s，SQL模型：%s/%s，分析模型：%s/%s", description, analysisType, sqlProvider.Name(), sqlModel, analysisProvider.Name(), analysisModel)
+	logger.Performance("📋 [性能] 任务参数 - 描述: %s, 分析类型: %s, SQL模型: %s/%s, 分析模型: %s/%s", description, analysisType, sqlProvider.Name(), sqlModel, analysisProvider.Name(), analysisModel)
+
+	// 第一步：生成SQL
+	sqlGenStartTime := time.Now()
+	log.Printf("[QueryWithAnalysis] 📝 步骤1开始：SQL生成 - %s", sqlGenStartTime.Format("15:04:05.000"))
+	logger.Performance("🚀 [性能] SQL生成开始 - 使用模型: %s/%s", sqlProvider.Name(), sqlModel)
+
+	sqlGenArgs := map[string]interface{}{
+		"description": description,
+		"provider":    sqlProvider.Name(),
+		"model":       sqlModel,
 	}
 	if tableName, ok := arguments["table_name"]; ok {
-		queryArgs["table_name"] = tableName
-	}
-	if provider, ok := arguments["provider"]; ok {
-		queryArgs["provider"] = provider
-	}
-	if model, ok := arguments["model"]; ok {
-		queryArgs["model"] = model
+		sqlGenArgs["table_name"] = tableName
 	}
 
-	log.Printf("[QueryWithAnalysis] 开始查询数据，描述：%s", description)
-
-	queryResult, err := c.executeAISmartQuery(ctx, queryArgs)
+	sqlResult, err := c.executeAIGenerateSQL(ctx, sqlGenArgs)
 	if err != nil {
-		return nil, fmt.Errorf("数据查询失败: %v", err)
+		return nil, fmt.Errorf("SQL生成失败: %v", err)
 	}
 
-	log.Printf("[QueryWithAnalysis] 数据查询完成")
+	sqlGenDuration := time.Since(sqlGenStartTime)
+	log.Printf("[QueryWithAnalysis] ✅ 步骤1完成：SQL生成耗时 %v", sqlGenDuration)
+	logger.Performance("✅ [性能] SQL生成完成 - 耗时: %v", sqlGenDuration)
 
-	// 第二步：分析数据 - 使用中文提示词
-	log.Printf("[QueryWithAnalysis] 开始数据分析，analysis_type: %s", analysisType)
-
-	analysisArgs := map[string]interface{}{
-		"data":          queryResult.Content[0].Text,
-		"analysis_type": analysisType,
-	}
-	if provider, ok := arguments["provider"]; ok {
-		analysisArgs["provider"] = provider
-	}
-	if model, ok := arguments["model"]; ok {
-		analysisArgs["model"] = model
+	// 解析SQL
+	var sqlData map[string]interface{}
+	if err := json.Unmarshal([]byte(sqlResult.Content[0].Text), &sqlData); err != nil {
+		return nil, fmt.Errorf("解析SQL生成结果失败: %v", err)
 	}
 
-	log.Printf("[QueryWithAnalysis] 准备调用AI分析，数据长度: %d", len(queryResult.Content[0].Text))
-	log.Printf("[QueryWithAnalysis] 查询结果内容: %s", queryResult.Content[0].Text)
+	generatedSQL, ok := sqlData["sql"].(string)
+	if !ok {
+		return nil, fmt.Errorf("无法从SQL生成结果中获取SQL语句")
+	}
 
-	// 解析查询结果以获取实际数据
-	var queryDataForAnalysis map[string]interface{}
-	actualData := ""
-	if err := json.Unmarshal([]byte(queryResult.Content[0].Text), &queryDataForAnalysis); err == nil {
-		// 优先提取 raw_result.rows 数据
-		if rawResult, ok := queryDataForAnalysis["raw_result"].(map[string]interface{}); ok {
-			if rows, ok := rawResult["rows"].([]interface{}); ok {
-				if jsonBytes, err := json.Marshal(rows); err == nil {
-					actualData = string(jsonBytes)
-				}
-			}
-		} else if data, ok := queryDataForAnalysis["data"].(map[string]interface{}); ok {
-			if rows, ok := data["rows"].([]interface{}); ok {
-				if jsonBytes, err := json.Marshal(rows); err == nil {
-					actualData = string(jsonBytes)
-				}
-			}
-		} else if rows, ok := queryDataForAnalysis["rows"].([]interface{}); ok {
-			if jsonBytes, err := json.Marshal(rows); err == nil {
-				actualData = string(jsonBytes)
+	// 第二步：执行SQL
+	sqlExecStartTime := time.Now()
+	log.Printf("[QueryWithAnalysis] 🗄️  步骤2开始：执行SQL查询 - %s，SQL: %s", sqlExecStartTime.Format("15:04:05.000"), generatedSQL)
+	logger.Performance("🗄️ [性能] 数据库查询开始 - SQL: %s", generatedSQL)
+
+	execArgs := map[string]interface{}{
+		"sql": generatedSQL,
+	}
+	if alias, ok := arguments["alias"]; ok {
+		execArgs["alias"] = alias
+	}
+	if limit, ok := arguments["limit"]; ok {
+		execArgs["limit"] = limit
+	}
+
+	execResult, err := c.executeAIExecuteSQL(ctx, execArgs)
+	if err != nil {
+		return nil, fmt.Errorf("SQL执行失败: %v", err)
+	}
+
+	sqlExecDuration := time.Since(sqlExecStartTime)
+	log.Printf("[QueryWithAnalysis] ✅ 步骤2完成：SQL执行耗时 %v", sqlExecDuration)
+	logger.Performance("✅ [性能] 数据库查询完成 - 耗时: %v", sqlExecDuration)
+
+	// 解析查询结果，直接提取员工数据
+	var dbResponse map[string]interface{}
+	if err := json.Unmarshal([]byte(execResult.Content[0].Text), &dbResponse); err != nil {
+		return nil, fmt.Errorf("解析查询结果失败: %v", err)
+	}
+
+	// 提取实际的员工数据行
+	var employeeData []interface{}
+	if result, ok := dbResponse["result"].(string); ok {
+		var resultData map[string]interface{}
+		if err := json.Unmarshal([]byte(result), &resultData); err == nil {
+			if rows, ok := resultData["rows"].([]interface{}); ok {
+				employeeData = rows
 			}
 		}
-
-		// 如果还是没有提取到数据，使用原始结果
-		if actualData == "" {
-			actualData = queryResult.Content[0].Text
-		}
-	} else {
-		actualData = queryResult.Content[0].Text
 	}
 
-	log.Printf("[QueryWithAnalysis] 提取的实际数据: %s", actualData)
+	if len(employeeData) == 0 {
+		return nil, fmt.Errorf("未找到员工数据")
+	}
 
-	// 更新分析参数使用提取的数据
-	analysisArgs["data"] = actualData
+	// 第三步：基于实际员工数据进行AI分析
+	analysisStartTime := time.Now()
+	log.Printf("[QueryWithAnalysis] 🤖 步骤3开始：AI数据分析 - %s，数据行数：%d", analysisStartTime.Format("15:04:05.000"), len(employeeData))
+	logger.Performance("🤖 [性能] AI分析开始 - 使用模型: %s/%s, 数据行数: %d", analysisProvider.Name(), analysisModel, len(employeeData))
 
-	// 使用改进的分析方法，包含中文提示
-	analysisResult, err := c.executeAIAnalyzeDataWithChinesePrompt(ctx, analysisArgs)
+	employeeJSON, _ := json.Marshal(employeeData)
+	var analysisPrompt string
+	switch analysisType {
+	case "insights":
+		analysisPrompt = fmt.Sprintf("请分析以下员工数据，提供业务洞察和发现。请用中文回答，重点关注：1)员工分布情况 2)薪资水平分析 3)部门结构 4)年龄构成 5)潜在的业务建议。\n\n员工数据：%s", string(employeeJSON))
+	case "summary":
+		analysisPrompt = fmt.Sprintf("请用中文总结以下员工数据的关键信息。\n\n员工数据：%s", string(employeeJSON))
+	case "recommendations":
+		analysisPrompt = fmt.Sprintf("请基于以下员工数据用中文提供管理建议和推荐。\n\n员工数据：%s", string(employeeJSON))
+	default:
+		analysisPrompt = fmt.Sprintf("请用中文分析以下员工数据。\n\n员工数据：%s", string(employeeJSON))
+	}
+
+	log.Printf("[QueryWithAnalysis] 🔄 调用AI模型进行分析，模型：%s/%s，提示词长度：%d", analysisProvider.Name(), analysisModel, len(analysisPrompt))
+	logger.Performance("🔄 [性能] AI模型调用 - 提示词长度: %d, 分析类型: %s", len(analysisPrompt), analysisType)
+
+	analysisResponse, err := analysisProvider.Call(ctx, analysisModel, analysisPrompt, map[string]interface{}{
+		"max_tokens": c.configManager.GetCommonConfig().MaxTokens,
+	})
 	if err != nil {
-		log.Printf("[QueryWithAnalysis] 数据分析失败: %v", err)
-		return nil, fmt.Errorf("数据分析失败: %v", err)
+		return nil, fmt.Errorf("AI分析失败: %v", err)
 	}
 
-	log.Printf("[QueryWithAnalysis] 数据分析完成")
+	analysisDuration := time.Since(analysisStartTime)
+	log.Printf("[QueryWithAnalysis] ✅ 步骤3完成：AI分析耗时 %v，响应长度：%d", analysisDuration, len(analysisResponse))
+	logger.Performance("✅ [性能] AI分析完成 - 耗时: %v, 响应长度: %d", analysisDuration, len(analysisResponse))
 
-	// 组合结果
-	var queryData, analysisData map[string]interface{}
-	json.Unmarshal([]byte(queryResult.Content[0].Text), &queryData)
-	json.Unmarshal([]byte(analysisResult.Content[0].Text), &analysisData)
+	// 清理分析结果
+	cleanedAnalysis := cleanAIResponse(analysisResponse)
 
+	// 计算总体耗时
+	totalDuration := time.Since(totalStartTime)
+	log.Printf("[QueryWithAnalysis] 🎉 全部完成！总耗时：%v", totalDuration)
+	log.Printf("[QueryWithAnalysis] 📊 性能统计 - SQL生成：%v，SQL执行：%v，AI分析：%v", sqlGenDuration, sqlExecDuration, analysisDuration)
+	logger.Performance("🎉 [性能] ai_query_with_analysis 执行完成 - 总耗时: %v", totalDuration)
+	logger.Performance("📊 [性能汇总] SQL生成: %v (%.1f%%) | 数据库查询: %v (%.1f%%) | AI分析: %v (%.1f%%)", 
+		sqlGenDuration, float64(sqlGenDuration.Nanoseconds())/float64(totalDuration.Nanoseconds())*100,
+		sqlExecDuration, float64(sqlExecDuration.Nanoseconds())/float64(totalDuration.Nanoseconds())*100,
+		analysisDuration, float64(analysisDuration.Nanoseconds())/float64(totalDuration.Nanoseconds())*100)
+
+	// 构建简洁的响应
 	response := map[string]interface{}{
-		"tool":          "ai_query_with_analysis",
-		"status":        "success",
-		"description":   description,
-		"analysis_type": analysisType,
-		"query_result":  queryData,
-		"analysis":      analysisData,
+		"tool":           "ai_query_with_analysis",
+		"status":         "success",
+		"description":    description,
+		"analysis_type":  analysisType,
+		"generated_sql":  generatedSQL,
+		"employee_data":  employeeData,
+		"analysis":       cleanedAnalysis,
+		"sql_provider":   sqlProvider.Name(),
+		"sql_model":      sqlModel,
+		"analysis_provider": analysisProvider.Name(),
+		"analysis_model": analysisModel,
 	}
 
 	jsonResponse, _ := json.MarshalIndent(response, "", "  ")
@@ -1760,172 +1177,7 @@ func (c *AITools) executeAIQueryWithAnalysis(ctx context.Context, arguments map[
 }
 
 // 7. 智能洞察 - 深度智能分析，提供业务洞察和建议
-func (c *AITools) executeAISmartInsights(ctx context.Context, arguments map[string]interface{}) (*mcp.ToolCallResult, error) {
-	prompt, ok := arguments["prompt"].(string)
-	if !ok {
-		return nil, fmt.Errorf("prompt参数必须是字符串")
-	}
 
-	// 获取AI提供商
-	provider, model, err := c.getProviderAndModel(arguments)
-	if err != nil {
-		return nil, err
-	}
-
-	// 获取参数
-	context := ""
-	if ctx, ok := arguments["context"].(string); ok {
-		context = ctx
-	}
-
-	insightLevel := "basic"
-	if il, ok := arguments["insight_level"].(string); ok {
-		insightLevel = il
-	}
-
-	// 获取表名 - 使用智能表名检测或默认表名
-	var tableName string
-	if tn, ok := arguments["table_name"].(string); ok && tn != "" {
-		tableName = tn
-	} else {
-		// 使用智能表名检测
-		defaultTable := c.getDefaultTableName(ctx)
-		detectedTable, err := c.intelligentTableDetection(ctx, prompt, defaultTable)
-		if err != nil {
-			debugPrintAICompatible("[DEBUG] 智能表名检测失败: %v，使用默认表名: %s\n", err, defaultTable)
-			tableName = defaultTable
-		} else {
-			tableName = detectedTable
-			debugPrintAICompatible("[DEBUG] 智能表名检测成功，使用表名: %s\n", tableName)
-		}
-	}
-
-	// 第一步：使用智能查询获取相关数据
-	dataQuery := fmt.Sprintf("查询%s表中与以下分析需求相关的数据：%s", tableName, prompt)
-	queryArgs := map[string]interface{}{
-		"prompt":   dataQuery,
-		"provider": provider.Name(),
-		"model":    model,
-	}
-
-	log.Printf("[AISmartInsights] 开始查询数据，查询需求：%s", dataQuery)
-
-	queryResult, err := c.executeAISmartQuery(ctx, queryArgs)
-	if err != nil {
-		return nil, fmt.Errorf("数据查询失败: %v", err)
-	}
-
-	log.Printf("[AISmartInsights] 数据查询完成")
-
-	// 解析查询结果以获取实际数据
-	var queryData map[string]interface{}
-	actualData := ""
-	if err := json.Unmarshal([]byte(queryResult.Content[0].Text), &queryData); err == nil {
-		if queryResultData, ok := queryData["query_result"].(string); ok {
-			actualData = queryResultData
-		} else if data, ok := queryData["data"].(string); ok {
-			actualData = data
-		} else {
-			actualData = queryResult.Content[0].Text
-		}
-	} else {
-		actualData = queryResult.Content[0].Text
-	}
-
-	log.Printf("[AISmartInsights] 准备进行%s级别的分析", insightLevel)
-
-	// 第二步：深度分析
-	var analysisPrompt string
-	switch insightLevel {
-	case "strategic":
-		analysisPrompt = fmt.Sprintf(`作为高级业务分析师，请基于以下数据和需求进行战略级分析：
-
-分析需求：%s
-上下文信息：%s
-相关数据：%s
-
-请提供战略级分析：
-1. 关键业务指标洞察
-2. 市场趋势分析
-3. 竞争优势评估
-4. 风险识别与管控
-5. 战略建议与路线图
-6. ROI预期分析
-
-请用中文回答，提供具体可执行的建议。`, prompt, context, actualData)
-
-	case "advanced":
-		analysisPrompt = fmt.Sprintf(`作为业务分析专家，请基于以下数据和需求进行深度分析：
-
-分析需求：%s
-上下文信息：%s
-相关数据：%s
-
-请提供深度分析：
-1. 数据模式识别
-2. 趋势预测
-3. 异常检测
-4. 相关性分析
-5. 改进建议
-6. 预期效果评估
-
-请用中文回答，提供具体的改进方案。`, prompt, context, actualData)
-
-	default: // basic
-		analysisPrompt = fmt.Sprintf(`请基于以下数据和需求进行基础分析：
-
-分析需求：%s
-上下文信息：%s
-相关数据：%s
-
-请提供基础分析：
-1. 数据概况总结
-2. 主要发现
-3. 基本建议
-
-请用中文回答。`, prompt, context, actualData)
-	}
-
-	log.Printf("[AISmartInsights] 开始AI分析")
-
-	// 调用AI进行深度分析
-	insights, err := provider.Call(ctx, model, analysisPrompt, map[string]interface{}{
-		"max_tokens":  2000,
-		"temperature": 0.6,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("智能洞察分析失败: %v", err)
-	}
-
-	log.Printf("[AISmartInsights] AI分析完成")
-
-	// 清理AI响应格式
-	cleanedInsights := cleanAIResponse(insights)
-
-	// 构建响应
-	response := map[string]interface{}{
-		"tool":          "ai_smart_insights",
-		"status":        "success",
-		"prompt":        prompt,
-		"insight_level": insightLevel,
-		"table_name":    tableName,
-		"context":       context,
-		"provider":      provider.Name(),
-		"model":         model,
-		"query_data":    actualData,
-		"insights":      cleanedInsights,
-	}
-
-	jsonResponse, _ := json.MarshalIndent(response, "", "  ")
-	return &mcp.ToolCallResult{
-		Content: []mcp.Content{
-			{
-				Type: "text",
-				Text: string(jsonResponse),
-			},
-		},
-	}, nil
-}
 
 // 智能表名识别和获取功能
 func (c *AITools) intelligentTableDetection(ctx context.Context, prompt string, defaultTable string) (string, error) {
@@ -2049,8 +1301,8 @@ func (c *AITools) extractTableFromPrompt(prompt string, availableTables []string
 
 // 使用AI智能匹配表名
 func (c *AITools) aiMatchTable(ctx context.Context, prompt string, availableTables []string) (string, error) {
-	// 获取AI提供商
-	provider, model, err := c.getProviderAndModel(map[string]interface{}{})
+	// 获取SQL生成专用的AI提供商和模型
+	provider, model, err := c.getProviderAndModelForFunction(map[string]interface{}{}, "sql_generation")
 	if err != nil {
 		return "", err
 	}
@@ -2067,8 +1319,8 @@ func (c *AITools) aiMatchTable(ctx context.Context, prompt string, availableTabl
 
 	debugPrintAICompatible("[DEBUG] AI表名匹配提示词: %s\n", aiPrompt)
 
-	// 调用AI
-	result, err := provider.Call(ctx, model, aiPrompt, map[string]interface{}{
+	// 调用AI（使用超时包装函数）
+	result, err := c.callAIWithTimeout(ctx, provider, model, aiPrompt, map[string]interface{}{
 		"temperature": 0.3,
 	})
 	if err != nil {
@@ -2115,7 +1367,8 @@ func (c *AITools) executeAIFileManager(ctx context.Context, arguments map[string
 		operationMode = mode
 	}
 
-	provider, model, err := c.getProviderAndModel(arguments)
+	// 获取代码生成专用的AI提供商和模型（文件管理涉及代码和脚本生成）
+	provider, model, err := c.getProviderAndModelForFunction(arguments, "code_generation")
 	if err != nil {
 		return nil, fmt.Errorf("获取AI提供商失败: %v", err)
 	}
@@ -2143,7 +1396,7 @@ func (c *AITools) executeAIFileManager(ctx context.Context, arguments map[string
   "warnings": ["任何安全警告或注意事项"]
 }`, instruction, targetPath, operationMode)
 
-	result, err := provider.Call(ctx, model, aiPrompt, nil)
+	result, err := c.callAIWithTimeout(ctx, provider, model, aiPrompt, nil)
 	if err != nil {
 		return nil, fmt.Errorf("AI文件管理分析失败: %v", err)
 	}
@@ -2447,6 +1700,7 @@ features:
 
 // executeAIDataProcessor 执行AI数据处理
 func (c *AITools) executeAIDataProcessor(ctx context.Context, arguments map[string]interface{}) (*mcp.ToolCallResult, error) {
+	startTime := time.Now()
 	instruction, ok := arguments["instruction"].(string)
 	if !ok {
 		return nil, fmt.Errorf("缺少instruction参数")
@@ -2467,7 +1721,8 @@ func (c *AITools) executeAIDataProcessor(ctx context.Context, arguments map[stri
 		outputFormat = of
 	}
 
-	provider, model, err := c.getProviderAndModel(arguments)
+	// 获取数据分析专用的AI提供商和模型
+	provider, model, err := c.getProviderAndModelForFunction(arguments, "data_analysis")
 	if err != nil {
 		return nil, fmt.Errorf("获取AI提供商失败: %v", err)
 	}
@@ -2495,7 +1750,7 @@ func (c *AITools) executeAIDataProcessor(ctx context.Context, arguments map[stri
   "errors": ["任何错误或警告"]
 }`, instruction, inputData, dataType, outputFormat)
 
-	result, err := provider.Call(ctx, model, aiPrompt, nil)
+	result, err := c.callAIWithTimeout(ctx, provider, model, aiPrompt, nil)
 	if err != nil {
 		return nil, fmt.Errorf("AI数据处理失败: %v", err)
 	}
@@ -2604,17 +1859,22 @@ func (c *AITools) executeAIDataProcessor(ctx context.Context, arguments map[stri
 	}
 
 	response := map[string]interface{}{
+		"tool":               "ai_data_processor",
+		"status":             "success",
+		"instruction":        instruction,
 		"ai_analysis":        result,
 		"data_type":          dataType,
 		"output_format":      outputFormat,
 		"processing_results": processingResults,
+		"duration":           time.Since(startTime).String(),
 	}
 
+	jsonResponse, _ := json.MarshalIndent(response, "", "  ")
 	return &mcp.ToolCallResult{
 		Content: []mcp.Content{
 			{
 				Type: "text",
-				Text: fmt.Sprintf("AI数据处理结果：\n%s", formatJSONResponse(response)),
+				Text: string(jsonResponse),
 			},
 		},
 	}, nil
@@ -2622,6 +1882,7 @@ func (c *AITools) executeAIDataProcessor(ctx context.Context, arguments map[stri
 
 // executeAIAPIClient 执行AI网络请求
 func (c *AITools) executeAIAPIClient(ctx context.Context, arguments map[string]interface{}) (*mcp.ToolCallResult, error) {
+	startTime := time.Now()
 	instruction, ok := arguments["instruction"].(string)
 	if !ok {
 		return nil, fmt.Errorf("缺少instruction参数")
@@ -2647,7 +1908,8 @@ func (c *AITools) executeAIAPIClient(ctx context.Context, arguments map[string]i
 		responseAnalysis = ra
 	}
 
-	provider, model, err := c.getProviderAndModel(arguments)
+	// 获取文本生成专用的AI提供商和模型（API分析和请求构造）
+	provider, model, err := c.getProviderAndModelForFunction(arguments, "text_generation")
 	if err != nil {
 		return nil, fmt.Errorf("获取AI提供商失败: %v", err)
 	}
@@ -2676,7 +1938,7 @@ func (c *AITools) executeAIAPIClient(ctx context.Context, arguments map[string]i
   "expected_response": "预期的响应格式"
 }`, instruction, baseURL, authInfo, requestMode)
 
-	result, err := provider.Call(ctx, model, aiPrompt, nil)
+	result, err := c.callAIWithTimeout(ctx, provider, model, aiPrompt, nil)
 	if err != nil {
 		return nil, fmt.Errorf("AI API分析失败: %v", err)
 	}
@@ -2724,6 +1986,35 @@ func (c *AITools) executeAIAPIClient(ctx context.Context, arguments map[string]i
 				executionResults["success"] = true
 				executionResults["http_response"] = httpResult.Content
 				executionResults["url"] = requestURL
+
+				// 如果启用了响应分析，对HTTP响应进行AI分析
+				if responseAnalysis && len(httpResult.Content) > 0 {
+					responseData := httpResult.Content[0].Text
+					analysisPrompt := fmt.Sprintf(`请分析以下API响应数据，用中文提供详细分析：
+
+原始指令：%s
+请求URL：%s
+
+响应数据：
+%s
+
+请提供以下分析：
+1. 数据结构分析
+2. 数据内容概述
+3. 数据质量评估
+4. 潜在用途建议
+5. 异常或注意事项`, instruction, requestURL, responseData)
+
+					analysisResult, err := c.callAIWithTimeout(ctx, provider, model, analysisPrompt, map[string]interface{}{
+						"max_tokens":  1000,
+						"temperature": 0.3,
+					})
+					if err != nil {
+						executionResults["analysis_error"] = fmt.Sprintf("响应分析失败: %v", err)
+					} else {
+						executionResults["response_analysis"] = analysisResult
+					}
+				}
 			}
 		} else {
 			executionResults["error"] = "无法确定请求URL"
@@ -2737,98 +2028,23 @@ func (c *AITools) executeAIAPIClient(ctx context.Context, arguments map[string]i
 	}
 
 	response := map[string]interface{}{
+		"tool":                      "ai_api_client",
+		"status":                    "success",
+		"instruction":               instruction,
+		"base_url":                  baseURL,
 		"ai_analysis":               result,
 		"request_mode":              requestMode,
 		"response_analysis_enabled": responseAnalysis,
 		"execution_results":         executionResults,
+		"duration":                  time.Since(startTime).String(),
 	}
 
+	jsonResponse, _ := json.MarshalIndent(response, "", "  ")
 	return &mcp.ToolCallResult{
 		Content: []mcp.Content{
 			{
 				Type: "text",
-				Text: fmt.Sprintf("AI API客户端结果：\n%s", formatJSONResponse(response)),
-			},
-		},
-	}, nil
-}
-
-// executeAISystemAdmin 执行AI系统管理
-func (c *AITools) executeAISystemAdmin(ctx context.Context, arguments map[string]interface{}) (*mcp.ToolCallResult, error) {
-	instruction, ok := arguments["instruction"].(string)
-	if !ok {
-		return nil, fmt.Errorf("缺少instruction参数")
-	}
-
-	safetyMode := "safe"
-	if sm, exists := arguments["safety_mode"].(string); exists {
-		safetyMode = sm
-	}
-
-	operationMode := "plan_only"
-	if om, exists := arguments["operation_mode"].(string); exists {
-		operationMode = om
-	}
-
-	provider, model, err := c.getProviderAndModel(arguments)
-	if err != nil {
-		return nil, fmt.Errorf("获取AI提供商失败: %v", err)
-	}
-
-	// 构建AI提示，让AI理解系统管理需求
-	aiPrompt := fmt.Sprintf(`你是一个智能系统管理助手。用户的指令是："%s"
-
-安全模式：%s
-- safe: 只进行安全的只读操作
-- moderate: 允许中等风险的操作
-- advanced: 允许高级系统操作(需要特别谨慎)
-
-操作模式：%s
-
-请分析这个指令并：
-1. 理解用户想要进行的系统管理操作
-2. 评估操作的风险级别
-3. 确定具体的执行步骤
-4. 提供安全建议
-
-请用JSON格式回复，包含以下字段：
-{
-  "analysis": "对系统管理指令的分析",
-  "risk_level": "风险级别(low/medium/high/critical)",
-  "operation_category": "操作类别(monitor/maintenance/config/security等)",
-  "action_plan": ["具体的操作步骤"],
-  "commands": ["建议的系统命令"],
-  "safety_warnings": ["安全警告"],
-  "prerequisites": ["执行前置条件"]
-}`, instruction, safetyMode, operationMode)
-
-	result, err := provider.Call(ctx, model, aiPrompt, nil)
-	if err != nil {
-		return nil, fmt.Errorf("AI系统管理分析失败: %v", err)
-	}
-
-	// 如果是execute模式且有systemTools，尝试执行一些安全的操作
-	var executionResults map[string]interface{}
-	if operationMode == "execute" && c.systemTools != nil && safetyMode == "safe" {
-		executionResults = map[string]interface{}{
-			"execution_attempted": true,
-			"safety_mode":         safetyMode,
-			"note":                "仅在安全模式下执行只读操作",
-		}
-	}
-
-	response := map[string]interface{}{
-		"ai_analysis":       result,
-		"safety_mode":       safetyMode,
-		"operation_mode":    operationMode,
-		"execution_results": executionResults,
-	}
-
-	return &mcp.ToolCallResult{
-		Content: []mcp.Content{
-			{
-				Type: "text",
-				Text: fmt.Sprintf("AI系统管理结果：\n%s", formatJSONResponse(response)),
+				Text: string(jsonResponse),
 			},
 		},
 	}, nil

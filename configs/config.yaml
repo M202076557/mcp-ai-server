@@ -79,6 +79,12 @@ tools:
         driver: "mysql"
         dsn: "root:root@tcp(localhost:3306)/mcp_test"
         description: "默认MySQL测试数据库连接"
+      # 示例数据库连接配置
+      demo:
+        alias: "demo"
+        driver: "mysql"
+        dsn: "root:root@tcp(localhost:3306)/mcp_test"
+        description: "演示用MySQL数据库连接"
     security:
       allow_drop: false
       allow_truncate: false
@@ -92,14 +98,35 @@ tools:
     default_provider: "ollama"
     default_model: "codellama:7b"
     common:
-      timeout: 30
+      timeout: 120
       max_tokens: 1000
       temperature: 0.7
+    
+    # 功能特定模型配置
+    function_models:
+      sql_generation:
+        provider: "ollama"
+        model: "codellama:7b"
+        description: "SQL生成专用模型，代码专业性强"
+      data_analysis:
+        provider: "ollama"
+        model: "llama3.2:1b"
+        description: "数据分析专用模型，速度快"
+      text_generation:
+        provider: "ollama"
+        model: "llama3.2:1b"
+        description: "通用文本生成模型"
+      code_generation:
+        provider: "ollama"
+        model: "codellama:7b"
+        description: "代码生成专用模型"
+    
     ollama:
       enabled: true
       base_url: "http://localhost:11434"
       models:
         - "codellama:7b"
+        - "llama3.2:1b"
       features:
         - "text_generation"
         - "code_generation"
@@ -257,12 +284,12 @@ performance:
 
   # 超时设置
   timeouts:
-    read: "30s"
-    write: "30s"
-    idle: "60s"
-    ai_request: "60s"
-    database_query: "30s"
-    http_request: "30s"
+    read: "90s"
+    write: "90s"
+    idle: "120s"
+    ai_request: "120s"
+    database_query: "60s"
+    http_request: "90s"
 
   # 限流设置
   rate_limit:

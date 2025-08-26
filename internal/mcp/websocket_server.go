@@ -148,8 +148,15 @@ func (s *WebSocketServer) handleConnection(conn *websocket.Conn) {
 		log.Printf("WebSocket连接已关闭: %s", conn.RemoteAddr())
 	}()
 
+	// 设置WebSocket超时
+	conn.SetReadDeadline(time.Now().Add(90 * time.Second))
+	conn.SetWriteDeadline(time.Now().Add(90 * time.Second))
+
 	// 消息循环
 	for {
+		// 设置读取超时
+		conn.SetReadDeadline(time.Now().Add(90 * time.Second))
+		
 		// 读取消息
 		_, message, err := conn.ReadMessage()
 		if err != nil {
@@ -181,6 +188,8 @@ func (s *WebSocketServer) handleConnection(conn *websocket.Conn) {
 
 		// 发送响应
 		if response != nil {
+			// 设置写入超时
+			conn.SetWriteDeadline(time.Now().Add(90 * time.Second))
 			if err := conn.WriteJSON(response); err != nil {
 				log.Printf("发送响应失败: %v", err)
 				break
